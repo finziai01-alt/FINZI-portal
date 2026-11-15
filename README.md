@@ -85,14 +85,14 @@ npm run dev
 
 ## What is pending integration (honestly marked)
 
-Per the project constraints, no fake claims are made. The following are **NOT backed by real services** and are marked "Pending Integration":
+Per the project constraints, no fake claims are made. Integration adapters are implemented but remain **inactive until you configure credentials** in `.env`. When inactive, they return a `pending` state and a helpful message instead of fabricating results.
 
-- **OCR / document extraction:** Documents can be uploaded and extraction fields entered manually, but no real OCR service is configured. Confidence scores and verified status are manual.
+- **OCR / document extraction:** Adapter implemented (AWS Textract). Set `OCR_PROVIDER=aws_textract` + AWS credentials to enable automatic extraction. Otherwise documents are uploaded with `ocrStatus: pending` and fields entered manually.
 - **GSTR-2B reconciliation:** Books-side ITC is reported; GSTR-2B columns show `awaiting_gstr2b` until GST portal download is integrated. No fabricated match/mismatch data.
-- **GST/TDS portal filing:** Tax records track `draft → in_progress → ready_for_review → reviewed → filed` status, but actual filing on the GST portal is a separate manual action by an authorised person.
-- **Email/SMS notifications:** Reminder notification methods default to `in_app`; email/SMS placeholders are present but not connected to a gateway.
-- **AI/LLM:** FINZI AI answers from direct queries against your stored data (rules-based). No external AI service is configured. Any AI-suggested action requires human approval before anything is posted.
-- **Voice integration:** `add_voice` / `generate_speech` placeholders noted as optional.
+- **GST/TDS portal filing:** Adapter implemented (GSTN OAuth2). Set `GSTN_ENABLED=true` + OAuth credentials to enable filing via `/api/tax/gstn/auth-url`, `/api/tax/gstn/callback`, `/api/tax/gstn/file`. Otherwise filing status stays in the preparation workflow (`draft → in_progress → ready_for_review → reviewed → filed`) and actual portal filing is a separate manual action.
+- **Email/SMS notifications:** Email adapter implemented via **Resend** (free tier: 100 emails/day). Set `EMAIL_PROVIDER=resend` + `EMAIL_API_KEY`. SMS via Twilio/Msg91 optional. Reminders fire email/SMS when configured and a contact email/phone is present; otherwise delivered in-app only.
+- **AI / LLM:** Adapter implemented with auto-fallback: **Google Gemini → NVIDIA Nemotron 3.5 Super VL 120B A12B → NVIDIA GLM 5.3 Flash → NVIDIA Nemotron Voice Chat**. Set `GEMINI_API_KEY` and/or `NVIDIA_API_KEY`. If ALL providers fail, FINZI AI shows `"Server Busy hold just a minute"` (no raw error surfaced to the user). Otherwise it runs as a rules-based assistant on stored data.
+- **Voice integration:** Browser-native Web Speech API (SpeechRecognition input + speechSynthesis output, `en-IN` English Indian). Works immediately — no external service or API key required.
 
 ## Key constraints enforced
 

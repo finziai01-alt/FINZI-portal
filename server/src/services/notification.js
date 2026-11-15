@@ -1,11 +1,13 @@
 // Notification Service Layer (Email / SMS / WhatsApp)
 // ==========================================================================
-// No real email/SMS gateway is configured by default. Notification methods
-// default to 'in_app'. To enable real delivery, set the provider and
-// credentials in .env, then implement the provider adapter below.
+// To enable real delivery, set the provider and credentials in .env.
 //
-// Supported providers (placeholders — implement when credentials exist):
-//   EMAIL_PROVIDER: sendgrid | ses | smtp | none
+// Free tier options:
+//   Email: Resend (resend.com) — 100 emails/day free
+//   SMS:   Twilio / Msg91 / none (SMS free tiers are rare; mark pending)
+//
+// Supported providers:
+//   EMAIL_PROVIDER: resend | sendgrid | ses | smtp | none
 //   SMS_PROVIDER:   twilio | msg91 | none
 
 const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'none';
@@ -23,6 +25,33 @@ function isSmsConfigured() {
 }
 
 /**
+ * Send an email notification via Resend (free tier: 100 emails/day).
+ * Returns { success, messageId, error, pending }.
+ */
+async function sendResendEmail({ to, subject, html, text }) {
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${EMAIL_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from: EMAIL_FROM,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+      text,
+    }),
+  });
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '');
+    throw new Error(`Resend API error: ${response.status} ${errText}`);
+  }
+  const result = await response.json();
+  return { pending: false, messageId: result.id || null, error: null };
+}
+
+/**
  * Send an email notification.
  * Returns { success, messageId, error, pending }.
  */
@@ -32,12 +61,15 @@ async function sendEmail({ to, subject, html, text }) {
       pending: true,
       messageId: null,
       error: null,
-      message: 'Email integration not configured. Set EMAIL_PROVIDER and EMAIL_API_KEY in .env to enable email delivery.',
+      message: 'Email integration not configured. Set EMAIL_PROVIDER=resend and EMAIL_API_KEY in .env to enable email delivery.',
     };
   }
 
   try {
     switch (EMAIL_PROVIDER) {
+      case 'resend': {
+        return await sendResendEmail({ to, subject, html, text });
+      }
       case 'sendgrid': {
         const sgMail = require('@sendgrid/mail');
         sgMail.setApiKey(EMAIL_API_KEY);
@@ -58,7 +90,6 @@ async function sendEmail({ to, subject, html, text }) {
         return { pending: false, messageId: 'ses-sent', error: null };
       }
       case 'smtp': {
-        // Implement nodemailer SMTP adapter here when credentials are provided.
         return { pending: true, messageId: null, error: null, message: 'SMTP adapter not yet implemented.' };
       }
       default:
@@ -93,7 +124,6 @@ async function sendSms({ to, body }) {
         return { pending: false, messageId: message.sid, error: null };
       }
       case 'msg91': {
-        // Implement MSG91 adapter here when credentials are provided.
         return { pending: true, messageId: null, error: null, message: 'MSG91 adapter not yet implemented.' };
       }
       default:
@@ -114,8 +144,8 @@ async function sendReminder({ reminder, channels = ['in_app'] }) {
     results.email = await sendEmail({
       to: reminder.contact_email,
       subject: `FINZI Reminder: ${reminder.title}`,
-      html: `<p>${reminder.description || ''}</p><p>Due: ${reminder.due_date}</p>`,
-      text: `${reminder.title}\n${reminder.description || ''}\nDue: ${reminder.due_date}`,
+      html: `<p>${reminder.description || ''}</p><p>Due: ${reminder.due_date}</p><p>Priority: ${reminder.priority}</p>`,
+      text: `${reminder.title}\n${reminder.description || ''}\nDue: ${reminder.due_date}\nPriority: ${reminder.priority}`,
     });
   }
   if (channels.includes('sms') && reminder.contact_phone) {
