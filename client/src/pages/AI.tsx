@@ -191,7 +191,7 @@ export default function AI() {
                 variant="outline"
                 size="sm"
                 onClick={() => setVoiceEnabled(!voiceEnabled)}
-                className={`text-xs ${voiceEnabled ? 'bg-green/10 text-green border-green-200' : ''}`}
+                className={`text-xs ${voiceEnabled ? 'bg-green/10 text-green border-secondary' : ''}`}
               >
                 <Volume2 size={12} className="mr-1" /> Voice Output
               </Button>
@@ -222,7 +222,7 @@ export default function AI() {
       </div>
 
       {voiceError && (
-        <div className="mb-4 p-3 rounded-md bg-surface-container-low border border-gray-200 text-secondary-text text-sm flex items-center gap-2">
+        <div className="mb-4 p-3 rounded-md bg-surface-container-low border border-outline text-secondary-text text-sm flex items-center gap-2">
           <AlertTriangle size={14} />
           {voiceError}
         </div>
@@ -251,7 +251,7 @@ export default function AI() {
                       key={conv.id}
                       onClick={() => { setCurrentConvId(conv.id); loadMessages(conv.id); }}
                       className={`p-3 cursor-pointer border-b border-border hover:bg-surface-container-low ${
-                        currentConvId === conv.id ? 'bg-green/10 border-green-200' : ''
+                        currentConvId === conv.id ? 'bg-green/10 border-secondary' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -383,6 +383,8 @@ export default function AI() {
     </div>
   );
 }
+
+
 
 
 

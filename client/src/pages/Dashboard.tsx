@@ -61,7 +61,7 @@ export default function Dashboard() {
           <select className="px-3 py-2 border border-border rounded-md text-sm bg-surface">
             <option>FY 2024-25</option>
           </select>
-          <button className="bg-navy text-white px-4 py-2 rounded-md text-sm hover:bg-navy/90">
+          <button className="bg-primary text-white px-4 py-2 rounded-md text-sm hover:bg-surface-container-lowest">
             + New Transaction
           </button>
         </div>
@@ -168,5 +168,6 @@ export default function Dashboard() {
     </div>
   );
 }
+
 
 

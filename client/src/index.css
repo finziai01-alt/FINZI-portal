@@ -7,76 +7,93 @@
     font-family: 'Inter', sans-serif;
   }
   body {
-    @apply bg-background text-primary-text antialiased;
+    @apply bg-background text-on-surface antialiased;
   }
 }
 
 @layer components {
-  /* Buttons - Stitch Design System */
-  .btn-primary {
-    @apply bg-green text-white shadow-sm hover:bg-green/90 px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2 whitespace-nowrap;
-  }
+  /* ===== Buttons - Stitch Design System ===== */
+  /* Primary Green Action: Solid #006d44 fill, white bold text */
+  .btn-primary,
   .btn-green {
-    @apply bg-green text-white shadow-sm hover:bg-green/90 px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2 whitespace-nowrap;
+    @apply bg-secondary text-on-secondary shadow-sm hover:bg-on-secondary-container px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2 whitespace-nowrap;
   }
+  /* Primary Navy/Black Brand: Solid #000000 fill */
+  .btn-navy {
+    @apply bg-primary text-on-primary shadow-sm hover:bg-inverse-surface px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2 whitespace-nowrap;
+  }
+  /* Secondary Outlined: Surface #FFFFFF, 1px border #75777d, text #121b2e */
   .btn-secondary {
-    @apply bg-surface border border-border text-primary-text hover:bg-gray-50 px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2;
+    @apply bg-surface-container-lowest border border-outline text-on-surface hover:bg-surface-container-low px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2 whitespace-nowrap;
   }
   .btn-outline {
-    @apply border border-border text-primary-text hover:bg-gray-50 px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2;
+    @apply border border-outline text-on-surface hover:bg-surface-container-low px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2 whitespace-nowrap;
   }
+  /* Ghost / Tertiary: Transparent base, text #45474c, hover to #f1f3ff */
   .btn-ghost {
-    @apply text-secondary-text hover:bg-gray-100 hover:text-primary-text px-3 py-2 rounded-md font-medium transition-colors;
+    @apply text-on-surface-variant hover:bg-surface-container-low px-3 py-2 rounded-md font-medium transition-colors;
   }
+  /* Destructive: #ba1a1a */
   .btn-danger {
-    @apply bg-danger hover:bg-danger/90 text-white px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2;
+    @apply bg-error text-on-error shadow-sm hover:bg-on-error-container px-4 py-2.5 rounded-md font-medium transition-colors flex items-center gap-2 whitespace-nowrap;
   }
   .btn-sm {
     @apply px-3 py-1.5 text-sm;
   }
   .btn-icon {
-    @apply p-2 rounded-md text-secondary-text hover:bg-gray-100 hover:text-primary-text transition-colors;
+    @apply p-2 rounded-md text-on-surface-variant hover:bg-surface-container-low transition-colors;
   }
 
-  /* Input fields - Stitch Design System */
+  /* ===== Input fields - Stitch Design System ===== */
+  /* Financial Currency Inputs: surface-container-low bg, outline border */
   .input-field {
-    @apply block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-green focus:border-transparent transition-all;
+    @apply block w-full px-3 py-2.5 border border-outline rounded-md bg-surface-container-low text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all;
   }
   .select-field {
-    @apply block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green focus:border-transparent transition-all appearance-none;
+    @apply block w-full px-3 py-2.5 border border-outline rounded-md bg-surface-container-low text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all appearance-none;
   }
 
-  /* Card - Stitch: #FFFFFF surface, 1px #E8EDF3 border, minimal shadow */
+  /* ===== Card - Stitch: #FFFFFF surface, 1px #75777d border, minimal shadow ===== */
   .card {
-    @apply bg-surface-container-lowest border border-outline-variant rounded-lg shadow-sm overflow-hidden;
+    @apply bg-surface-container-lowest border border-outline rounded-lg shadow-sm overflow-hidden;
   }
 
-  /* Badge - Stitch: compact rectangular tags with 4px border radius */
+  /* ===== Badge - Stitch: compact rectangular tags with 4px radius ===== */
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
   }
-  .badge-success { @apply bg-secondary-container/40 text-secondary font-semibold; }
-  .badge-warning { @apply bg-warning/10 text-warning; }
-  .badge-danger { @apply bg-danger/10 text-danger; }
-  .badge-info { @apply bg-info/10 text-info; }
-  .badge-default { @apply bg-gray-100 text-secondary-text; }
+  .badge-success {
+    @apply bg-secondary-container/40 text-secondary font-semibold;
+  }
+  .badge-warning {
+    @apply bg-warning/10 text-warning;
+  }
+  .badge-danger {
+    @apply bg-error-container/40 text-error font-semibold;
+  }
+  .badge-info {
+    @apply bg-tertiary-container/40 text-tertiary-container font-semibold;
+  }
+  .badge-default {
+    @apply bg-surface-container-low text-on-surface-variant;
+  }
 
-  /* Table header */
+  /* ===== Table ===== */
   .table-header {
-    @apply bg-surface-container-low px-4 py-3 text-left text-xs font-semibold text-secondary-text border-b border-border;
+    @apply bg-surface-container-low px-4 py-3 text-left text-xs font-semibold text-on-surface-variant border-b border-outline;
   }
   .table-cell {
-    @apply px-4 py-3 border-b border-border text-sm text-primary-text;
+    @apply px-4 py-3 border-b border-outline text-sm text-on-surface;
   }
 
-  /* KPI card - Stitch: #FFFFFF surface, 1px #E8EDF3 border */
+  /* ===== KPI card - Stitch: #FFFFFF surface, 1px border ===== */
   .kpi-card {
-    @apply bg-surface-container-lowest border border-border rounded-lg p-5 shadow-sm;
+    @apply bg-surface-container-lowest border border-outline rounded-lg p-5 shadow-sm;
   }
 
-  /* Sidebar item */
+  /* ===== Sidebar item - Stitch ===== */
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-secondary-text hover:bg-gray-50 hover:text-primary-text transition-colors rounded-lg;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors;
   }
   .sidebar-item-active {
     @apply bg-secondary-container text-on-secondary-container font-semibold shadow-sm;

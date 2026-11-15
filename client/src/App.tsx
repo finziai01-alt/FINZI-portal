@@ -44,7 +44,7 @@ export default function App() {
 
   if (state.isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-navy">
+      <div className="flex h-screen items-center justify-center bg-primary">
         <div className="flex flex-col items-center gap-4 text-white">
           <div className="w-12 h-12 bg-green rounded-lg flex items-center justify-center">
             <span className="font-bold text-lg">F</span>
@@ -90,4 +90,5 @@ export default function App() {
     </Routes>
   );
 }
+
 

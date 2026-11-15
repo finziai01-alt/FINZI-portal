@@ -29,7 +29,7 @@ export default function Login() {
 
   return (
     <div className="flex h-screen bg-background">
-      <div className="hidden lg:flex lg:w-1/2 bg-navy p-12 text-white flex-col justify-between">
+      <div className="hidden lg:flex lg:w-1/2 bg-primary p-12 text-white flex-col justify-between">
         <div>
           <div className="flex items-center gap-2 mb-8">
             <div className="w-10 h-10 bg-green rounded-lg flex items-center justify-center">
@@ -38,7 +38,7 @@ export default function Login() {
             <span className="text-2xl font-bold tracking-tight">FINZI AI</span>
           </div>
           <h2 className="text-3xl font-semibold mb-4">Intelligent Financial Management</h2>
-          <p className="text-gray-300 max-w-md leading-relaxed">
+          <p className="text-on-surface-variant max-w-md leading-relaxed">
             AI-powered accounting, financial management and auditing platform for Indian businesses.
           </p>
           <div className="mt-8 flex gap-3">
@@ -110,5 +110,7 @@ export default function Login() {
     </div>
   );
 }
+
+
 
 

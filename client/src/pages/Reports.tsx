@@ -87,7 +87,7 @@ export default function Reports() {
           const key = report.title.toLowerCase().replace(' ', '-');
           return (
             <Card key={key} className={`cursor-pointer p-4 hover:bg-surface-container-low transition-colors border ${
-              selected === key ? 'border-green-500 bg-green/10' : 'border-border'
+              selected === key ? 'border-secondary bg-green/10' : 'border-border'
             }`} onClick={() => { setSelected(key); loadReport(key); }}>
               <div className="flex items-center justify-between">
                 <div>
@@ -150,6 +150,7 @@ export default function Reports() {
     </div>
   );
 }
+
 
 
 

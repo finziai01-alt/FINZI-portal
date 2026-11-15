@@ -49,10 +49,10 @@ export const Sidebar: React.FC = () => {
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   return (
-    <aside className={`fixed left-0 top-0 h-screen border-r border-border bg-navy text-white z-50 transition-all duration-300 ${
+    <aside className={`fixed left-0 top-0 h-screen border-r border-border bg-surface-container-lowest text-on-surface z-50 transition-all duration-300 ${
       collapsed ? 'w-16' : 'w-64'
     }`}>
-      <div className="flex items-center justify-between h-16 px-4 bg-navy/90 border-b border-border">
+      <div className="flex items-center justify-between h-16 px-4 bg-surface-container-lowest border-b border-border">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-green rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-lg">F</span>
@@ -96,14 +96,14 @@ export const Sidebar: React.FC = () => {
         ))}
       </div>
 
-      <div className="absolute bottom-0 w-full p-3 border-t border-border bg-navy/90">
+      <div className="absolute bottom-0 w-full p-3 border-t border-border bg-surface-container-lowest">
         {state.companies.length > 0 && (
           <div className="mb-3">
             <label className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2">Company</label>
             <select
               value={state.company?.id || ''}
               onChange={(e) => switchCompany(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-border rounded bg-navy/90 text-white focus:outline-none focus:ring-2 focus:ring-green"
+              className="w-full px-2 py-1.5 text-xs border border-border rounded bg-surface-container-lowest text-white focus:outline-none focus:ring-2 focus:ring-green"
             >
               {state.companies.map((c) => (
                 <option key={c.id} value={c.id}>{c.legal_name}</option>
@@ -111,7 +111,7 @@ export const Sidebar: React.FC = () => {
             </select>
           </div>
         )}
-        <div className="px-2 py-3 bg-navy/90 rounded-lg border border-border">
+        <div className="px-2 py-3 bg-surface-container-lowest rounded-lg border border-border">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full text-secondary-text flex items-center justify-center text-xs font-bold">
               {state.user?.full_name?.[0] || 'U'}
@@ -129,5 +129,7 @@ export const Sidebar: React.FC = () => {
     </aside>
   );
 };
+
+
 
 

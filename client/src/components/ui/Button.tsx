@@ -6,7 +6,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-navy text-white shadow-sm hover:bg-navy/90',
+        primary: 'bg-primary text-white shadow-sm hover:bg-surface-container-lowest',
         green: 'bg-green text-white shadow-sm hover:bg-green/90',
         secondary: 'bg-surface border border-border text-primary-text hover:bg-surface-container-low',
         outline: 'border border-border text-primary-text hover:bg-surface-container-low',
@@ -43,4 +43,5 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({ classN
   );
 });
 Button.displayName = 'Button';
+
 
