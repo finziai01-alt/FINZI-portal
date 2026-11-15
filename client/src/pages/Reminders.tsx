@@ -54,14 +54,14 @@ export default function Reminders() {
         </Card>
         <Card className="p-4">
           <div className="text-xs font-semibold text-secondary-text">Completed</div>
-          <div className="text-2xl font-bold text-green-600 tnum">
+          <div className="text-2xl font-bold text-green tnum">
             {reminders.filter(r => r.status === 'completed').length}
           </div>
         </Card>
       </div>
 
       <div className="relative max-w-md mb-4">
-        <SearchIcon size={16} className="absolute left-3 top-3 text-gray-400" />
+        <SearchIcon size={16} className="absolute left-3 top-3 text-secondary-text" />
         <Input
           placeholder="Search reminders..."
           value={search}
@@ -78,7 +78,7 @@ export default function Reminders() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-border">
+                <tr className="bg-surface-container-low border-b border-border">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Title</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Category</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Due Date</th>
@@ -96,7 +96,7 @@ export default function Reminders() {
                   </tr>
                 ) : (
                   reminders.map((rem) => (
-                    <tr key={rem.id} className="border-b border-border hover:bg-gray-50">
+                    <tr key={rem.id} className="border-b border-border hover:bg-surface-container-low">
                       <td className="px-4 py-3 text-primary-text">{rem.title}</td>
                       <td className="px-4 py-3 text-xs text-secondary-text capitalize">{rem.category}</td>
                       <td className="px-4 py-3 text-xs text-secondary-text">{rem.due_date}</td>
@@ -125,3 +125,6 @@ const SearchIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16
     <path d="m21 21 -4.3-4.3" />
   </svg>
 );
+
+
+

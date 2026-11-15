@@ -114,7 +114,7 @@ export default function VendorCreate() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/bills')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-gray-100 rounded-lg">
+          <button onClick={() => navigate('/bills')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-surface-container-low rounded-lg">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -137,7 +137,7 @@ export default function VendorCreate() {
         <Card>
           <CardHeader>
             <h2 className="text-sm font-semibold flex items-center gap-2">
-              <PlusCircle size={16} className="text-green-600" />
+              <PlusCircle size={16} className="text-green" />
               Vendor Information
             </h2>
           </CardHeader>
@@ -195,7 +195,7 @@ export default function VendorCreate() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-primary-text flex items-center gap-2">
-                  <input type="checkbox" {...register('is_msme')} className="rounded border-border text-green-600 focus:ring-green-500" />
+                  <input type="checkbox" {...register('is_msme')} className="rounded border-border text-green focus:ring-green" />
                   MSME Registered
                 </label>
               </div>
@@ -206,3 +206,5 @@ export default function VendorCreate() {
     </div>
   );
 }
+
+

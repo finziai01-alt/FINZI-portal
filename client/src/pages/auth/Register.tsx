@@ -39,7 +39,7 @@ export default function Register() {
       <div className="hidden lg:flex lg:w-1/2 bg-navy p-12 text-white flex-col justify-between">
         <div>
           <div className="flex items-center gap-2 mb-8">
-            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-green rounded-lg flex items-center justify-center">
               <span className="font-bold text-lg">F</span>
             </div>
             <span className="text-2xl font-bold tracking-tight">FINZI AI</span>
@@ -50,8 +50,8 @@ export default function Register() {
           </p>
         </div>
         <div className="mt-auto">
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <Check size={14} className="text-green-600" />
+          <div className="flex items-center gap-2 text-sm text-secondary-text">
+            <Check size={14} className="text-green" />
             <span>Bank-grade encryption</span>
           </div>
         </div>
@@ -59,7 +59,7 @@ export default function Register() {
       <div className="lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center">
+            <div className="w-8 h-8 bg-green rounded flex items-center justify-center">
               <span className="font-bold text-sm">F</span>
             </div>
             <span className="text-xl font-bold tracking-tight">FINZI AI</span>
@@ -108,11 +108,11 @@ export default function Register() {
                     type="checkbox"
                     checked={formData.terms}
                     onChange={(e) => setFormData({ ...formData, terms: e.target.checked })}
-                    className="rounded border-border text-green-600 focus:ring-green-500 mt-0.5"
+                    className="rounded border-border text-green focus:ring-green mt-0.5"
                   />
                   <label className="text-sm text-secondary-text leading-relaxed">
-                    I agree to the <Link to="#" className="text-green-600 hover:text-green-600/90">Terms of Service</Link> and{' '}
-                    <Link to="#" className="text-green-600 hover:text-green-600/90">Privacy Policy</Link>
+                    I agree to the <Link to="#" className="text-green hover:text-green/90">Terms of Service</Link> and{' '}
+                    <Link to="#" className="text-green hover:text-green/90">Privacy Policy</Link>
                   </label>
                 </div>
                 {error && <p className="text-sm text-danger">{error}</p>}
@@ -122,7 +122,7 @@ export default function Register() {
               </form>
               <p className="mt-6 text-center text-secondary-text text-sm">
                 Already have an account?{' '}
-                <Link to="/login" className="text-green-600 hover:text-green-600/90 font-medium">
+                <Link to="/login" className="text-green hover:text-green/90 font-medium">
                   Sign in
                 </Link>
               </p>
@@ -130,8 +130,8 @@ export default function Register() {
           ) : (
             <>
               <div className="text-center py-10">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check size={32} className="text-green-600" />
+                <div className="w-16 h-16 bg-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check size={32} className="text-green" />
                 </div>
                 <h2 className="text-2xl font-bold mb-2">Account created!</h2>
                 <p className="text-secondary-text mb-6">
@@ -148,3 +148,5 @@ export default function Register() {
     </div>
   );
 }
+
+

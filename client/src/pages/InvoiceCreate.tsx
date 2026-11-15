@@ -212,7 +212,7 @@ export default function InvoiceCreate() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/invoices')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-gray-100 rounded-lg">
+          <button onClick={() => navigate('/invoices')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-surface-container-low rounded-lg">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -258,7 +258,7 @@ export default function InvoiceCreate() {
                     setValue('customer_name', c ? c.name : '');
                     setValue('customer_gstin', c ? c.gstin : '');
                   }}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
                 >
                   <option value="">Select customer</option>
                   {customers.map((c) => (
@@ -295,7 +295,7 @@ export default function InvoiceCreate() {
                 <label className="text-sm font-medium text-primary-text">Status</label>
                 <select
                   {...register('status')}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
                 >
                   <option value="draft">Draft</option>
                   <option value="sent">Sent</option>
@@ -339,7 +339,7 @@ export default function InvoiceCreate() {
         <Card>
           <CardHeader className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <PlusCircle size={16} className="text-green-600" />
+              <PlusCircle size={16} className="text-green" />
               <h2 className="text-sm font-semibold">Line Items</h2>
             </div>
             <Button variant="outline" size="sm" onClick={addItem}>
@@ -449,3 +449,5 @@ export default function InvoiceCreate() {
     </div>
   );
 }
+
+

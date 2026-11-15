@@ -48,7 +48,7 @@ export default function Settings() {
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-3 text-sm font-medium border-b-2 ${
               activeTab === tab.key
-                ? 'border-green-600 text-green-600'
+                ? 'border-green text-green'
                 : 'border-transparent text-secondary-text hover:text-primary-text'
             } transition-colors`}
           >
@@ -142,21 +142,21 @@ export default function Settings() {
             <h2 className="text-sm font-semibold">Security & Roles</h2>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-gray-50">
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-surface-container-low">
               <div>
                 <p className="text-sm font-medium text-primary-text">Two-Factor Authentication</p>
                 <p className="text-xs text-secondary-text">Add extra security to your account</p>
               </div>
               <Button variant="outline" size="sm">Enable 2FA</Button>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-gray-50">
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-surface-container-low">
               <div>
                 <p className="text-sm font-medium text-primary-text">Password Change</p>
                 <p className="text-xs text-secondary-text">Update your account password</p>
               </div>
               <Button variant="outline" size="sm">Change Password</Button>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-gray-50">
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-surface-container-low">
               <div>
                 <p className="text-sm font-medium text-primary-text">Session Timeout</p>
                 <p className="text-xs text-secondary-text">Automatic logout after inactivity</p>
@@ -189,7 +189,7 @@ export default function Settings() {
                   <p className="text-sm font-medium text-primary-text">{item.label}</p>
                   <p className="text-xs text-secondary-text">{item.desc}</p>
                 </div>
-                <input type="checkbox" defaultChecked className="rounded border-border text-green-600 focus:ring-green-500" />
+                <input type="checkbox" defaultChecked className="rounded border-border text-green focus:ring-green" />
               </div>
             ))}
           </CardContent>
@@ -202,10 +202,10 @@ export default function Settings() {
             <h2 className="text-sm font-semibold">Billing & Subscription</h2>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="p-6 rounded-lg border border-border bg-gray-50">
+            <div className="p-6 rounded-lg border border-border bg-surface-container-low">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <CreditCard size={24} className="text-green-600" />
+                <div className="w-12 h-12 rounded-full bg-green/10 flex items-center justify-center">
+                  <CreditCard size={24} className="text-green" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-primary-text">FINZI AI Professional</p>
@@ -242,3 +242,5 @@ export default function Settings() {
     </div>
   );
 }
+
+

@@ -73,7 +73,7 @@ export default function Ledger() {
 
       <div className="flex items-center gap-4 mb-4">
         <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-3 text-secondary-text" />
           <Input
             placeholder="Search accounts or journal entries..."
             value={search}
@@ -93,7 +93,7 @@ export default function Ledger() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-border">
+                    <tr className="bg-surface-container-low border-b border-border">
                       <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Code</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Account Name</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Group</th>
@@ -110,7 +110,7 @@ export default function Ledger() {
                       </tr>
                     ) : (
                       accounts.map((acc) => (
-                        <tr key={acc.id} className="border-b border-border hover:bg-gray-50">
+                        <tr key={acc.id} className="border-b border-border hover:bg-surface-container-low">
                           <td className="px-4 py-3 text-xs font-mono text-primary-text">{acc.code}</td>
                           <td className="px-4 py-3 text-primary-text">{acc.name}</td>
                           <td className="px-4 py-3 text-xs text-secondary-text">{acc.account_group}</td>
@@ -140,14 +140,14 @@ export default function Ledger() {
                 ) : (
                   entries.slice(0, 5).map((entry) => (
                     <div key={entry.id} className="flex items-start gap-3 p-3 border-b border-border last:border-0">
-                      <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-secondary-text shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-surface-container-low flex items-center justify-center text-xs text-secondary-text shrink-0">
                         {entry.entry_number.replace('JV-', '')}
                       </div>
                       <div className="flex-1">
                         <p className="text-sm text-primary-text">{entry.entry_number}</p>
                         <p className="text-xs text-secondary-text">{entry.narration}</p>
                         <div className="flex items-center gap-1 mt-1">
-                          <span className="text-xs font-medium text-green-600">{formatMoneyIN(entry.total_debit)}</span>
+                          <span className="text-xs font-medium text-green">{formatMoneyIN(entry.total_debit)}</span>
                           <span className="text-xs font-medium text-red-600">{formatMoneyIN(entry.total_credit)}</span>
                         </div>
                       </div>
@@ -163,3 +163,7 @@ export default function Ledger() {
     </div>
   );
 }
+
+
+
+

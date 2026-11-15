@@ -67,7 +67,7 @@ export default function Tax() {
         </Card>
         <Card className="p-4">
           <div className="text-xs font-semibold text-secondary-text">Returns Filed</div>
-          <div className="text-2xl font-bold text-green-600 tnum">
+          <div className="text-2xl font-bold text-green tnum">
             {dashboard ? dashboard.returns_filed : 0}
           </div>
         </Card>
@@ -82,19 +82,19 @@ export default function Tax() {
             <CardContent className="space-y-4">
               {gstr3b ? (
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg border border-border bg-gray-50">
+                  <div className="p-3 rounded-lg border border-border bg-surface-container-low">
                     <p className="text-xs text-secondary-text">Outward Supplies</p>
                     <p className="text-lg font-bold tnum">{formatMoneyIN(gstr3b.outward_supplies || 0)}</p>
                   </div>
-                  <div className="p-3 rounded-lg border border-border bg-gray-50">
+                  <div className="p-3 rounded-lg border border-border bg-surface-container-low">
                     <p className="text-xs text-secondary-text">Inward Supplies (ITC)</p>
                     <p className="text-lg font-bold tnum">{formatMoneyIN(gstr3b.inward_supplies || 0)}</p>
                   </div>
-                  <div className="p-3 rounded-lg border border-border bg-gray-50">
+                  <div className="p-3 rounded-lg border border-border bg-surface-container-low">
                     <p className="text-xs text-secondary-text">Tax Payable</p>
                     <p className="text-lg font-bold text-danger tnum">{formatMoneyIN(gstr3b.tax_payable || 0)}</p>
                   </div>
-                  <div className="p-3 rounded-lg border border-border bg-gray-50">
+                  <div className="p-3 rounded-lg border border-border bg-surface-container-low">
                     <p className="text-xs text-secondary-text">Late Fee</p>
                     <p className="text-lg font-bold tnum">{formatMoneyIN(gstr3b.late_fee || 0)}</p>
                   </div>
@@ -164,3 +164,5 @@ export default function Tax() {
     </div>
   );
 }
+
+

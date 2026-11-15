@@ -191,7 +191,7 @@ export default function AI() {
                 variant="outline"
                 size="sm"
                 onClick={() => setVoiceEnabled(!voiceEnabled)}
-                className={`text-xs ${voiceEnabled ? 'bg-green-100 text-green-600 border-green-200' : ''}`}
+                className={`text-xs ${voiceEnabled ? 'bg-green/10 text-green border-green-200' : ''}`}
               >
                 <Volume2 size={12} className="mr-1" /> Voice Output
               </Button>
@@ -222,7 +222,7 @@ export default function AI() {
       </div>
 
       {voiceError && (
-        <div className="mb-4 p-3 rounded-md bg-gray-100 border border-gray-200 text-secondary-text text-sm flex items-center gap-2">
+        <div className="mb-4 p-3 rounded-md bg-surface-container-low border border-gray-200 text-secondary-text text-sm flex items-center gap-2">
           <AlertTriangle size={14} />
           {voiceError}
         </div>
@@ -250,8 +250,8 @@ export default function AI() {
                     <div
                       key={conv.id}
                       onClick={() => { setCurrentConvId(conv.id); loadMessages(conv.id); }}
-                      className={`p-3 cursor-pointer border-b border-border hover:bg-gray-50 ${
-                        currentConvId === conv.id ? 'bg-green-50 border-green-200' : ''
+                      className={`p-3 cursor-pointer border-b border-border hover:bg-surface-container-low ${
+                        currentConvId === conv.id ? 'bg-green/10 border-green-200' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -274,13 +274,13 @@ export default function AI() {
                 <CardHeader className="pb-3 border-b-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Bot size={16} className="text-green-600" />
+                      <Bot size={16} className="text-green" />
                       <h2 className="text-sm font-semibold">FINZI AI</h2>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-secondary-text">Powered by FINZI AI</span>
                       {voiceSpeaking && (
-                        <span className="flex items-center gap-1 text-xs text-green-600">
+                        <span className="flex items-center gap-1 text-xs text-green">
                           <Volume2 size={12} /> Speaking
                         </span>
                       )}
@@ -300,8 +300,8 @@ export default function AI() {
                         <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[80%] p-3 rounded-lg ${
                             msg.role === 'user'
-                              ? 'bg-green-600 text-white rounded-tl-none'
-                              : 'bg-gray-100 text-primary-text rounded-tr-none'
+                              ? 'bg-green text-white rounded-tl-none'
+                              : 'bg-surface-container-low text-primary-text rounded-tr-none'
                           }`}>
                             <p className="text-sm">{msg.content}</p>
                             {msg.role === 'assistant' && voiceEnabled && voiceSpeaking === false && (
@@ -383,3 +383,6 @@ export default function AI() {
     </div>
   );
 }
+
+
+

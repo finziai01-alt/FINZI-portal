@@ -54,7 +54,7 @@ export const Sidebar: React.FC = () => {
     }`}>
       <div className="flex items-center justify-between h-16 px-4 bg-navy/90 border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-green rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-lg">F</span>
           </div>
           {!collapsed && <span className="font-bold text-lg tracking-tight">FINZI AI</span>}
@@ -71,7 +71,7 @@ export const Sidebar: React.FC = () => {
       <div className="overflow-y-auto h-[calc(100vh-160px)] p-3">
         {navItems.map((group) => (
           <div key={group.group} className="mb-4">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">{group.group}</h3>
+            <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2 px-2">{group.group}</h3>
             <div className="space-y-1">
               {group.items.map((item) => {
                 const active = isActive(item.path);
@@ -82,8 +82,8 @@ export const Sidebar: React.FC = () => {
                     onClick={() => navigate(item.path)}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                       active
-                        ? 'bg-green-100 text-green-600 border-r-2 border-green-600'
-                        : 'text-gray-400 hover:bg-gray-50/50 hover:text-white'
+                        ? 'bg-green/10 text-green border-r-2 border-green'
+                        : 'text-secondary-text hover:bg-surface-container-low/50 hover:text-white'
                     }`}
                   >
                     <Icon size={18} />
@@ -99,11 +99,11 @@ export const Sidebar: React.FC = () => {
       <div className="absolute bottom-0 w-full p-3 border-t border-border bg-navy/90">
         {state.companies.length > 0 && (
           <div className="mb-3">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Company</label>
+            <label className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2">Company</label>
             <select
               value={state.company?.id || ''}
               onChange={(e) => switchCompany(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-gray-600 rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-2 py-1.5 text-xs border border-border rounded bg-navy/90 text-white focus:outline-none focus:ring-2 focus:ring-green"
             >
               {state.companies.map((c) => (
                 <option key={c.id} value={c.id}>{c.legal_name}</option>
@@ -111,16 +111,16 @@ export const Sidebar: React.FC = () => {
             </select>
           </div>
         )}
-        <div className="px-2 py-3 bg-gray-800/50 rounded-lg border border-gray-700">
+        <div className="px-2 py-3 bg-navy/90 rounded-lg border border-border">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs font-bold">
+            <div className="w-8 h-8 rounded-full text-secondary-text flex items-center justify-center text-xs font-bold">
               {state.user?.full_name?.[0] || 'U'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{state.user?.full_name || 'User'}</p>
-              <p className="text-xs text-gray-400 truncate">{state.user?.email}</p>
+              <p className="text-xs text-secondary-text truncate">{state.user?.email}</p>
             </div>
-            <button onClick={() => navigate('/login')} className="text-gray-400 hover:text-white text-xs">
+            <button onClick={() => navigate('/login')} className="text-secondary-text hover:text-white text-xs">
               Sign out
             </button>
           </div>
@@ -129,3 +129,5 @@ export const Sidebar: React.FC = () => {
     </aside>
   );
 };
+
+

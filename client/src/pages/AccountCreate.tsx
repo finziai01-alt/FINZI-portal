@@ -115,7 +115,7 @@ export default function AccountCreate() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/ledger')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-gray-100 rounded-lg">
+          <button onClick={() => navigate('/ledger')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-surface-container-low rounded-lg">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -138,7 +138,7 @@ export default function AccountCreate() {
         <Card>
           <CardHeader>
             <h2 className="text-sm font-semibold flex items-center gap-2">
-              <PlusCircle size={16} className="text-green-600" />
+              <PlusCircle size={16} className="text-green" />
               Account Details
             </h2>
           </CardHeader>
@@ -158,7 +158,7 @@ export default function AccountCreate() {
                 <label className="text-sm font-medium text-primary-text">Account Group <span className="text-danger">*</span></label>
                 <select
                   {...register('account_group')}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
                 >
                   <option value="">Select group</option>
                   {groups.map((g) => (
@@ -175,7 +175,7 @@ export default function AccountCreate() {
                 <label className="text-sm font-medium text-primary-text">Parent Account</label>
                 <select
                   {...register('parent_id')}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
                 >
                   <option value="">No parent (top-level)</option>
                   {accounts.map((a) => (
@@ -194,3 +194,5 @@ export default function AccountCreate() {
     </div>
   );
 }
+
+

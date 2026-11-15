@@ -111,7 +111,7 @@ export default function CustomerCreate() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/invoices')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-gray-100 rounded-lg">
+          <button onClick={() => navigate('/invoices')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-surface-container-low rounded-lg">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -134,7 +134,7 @@ export default function CustomerCreate() {
         <Card>
           <CardHeader>
             <h2 className="text-sm font-semibold flex items-center gap-2">
-              <PlusCircle size={16} className="text-green-600" />
+              <PlusCircle size={16} className="text-green" />
               Customer Information
             </h2>
           </CardHeader>
@@ -197,3 +197,5 @@ export default function CustomerCreate() {
     </div>
   );
 }
+
+

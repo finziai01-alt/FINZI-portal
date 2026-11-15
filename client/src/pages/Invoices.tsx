@@ -65,14 +65,14 @@ export default function Invoices() {
         </Card>
         <Card className="p-4">
           <div className="text-xs font-semibold text-secondary-text">Sent This Month</div>
-          <div className="text-2xl font-bold text-green-600 tnum">
+          <div className="text-2xl font-bold text-green tnum">
             {formatMoneyIN(invoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.amount_received, 0))}
           </div>
         </Card>
       </div>
 
       <div className="relative max-w-md mb-4">
-        <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+        <Search size={16} className="absolute left-3 top-3 text-secondary-text" />
         <Input
           placeholder="Search by customer or invoice number..."
           value={search}
@@ -86,7 +86,7 @@ export default function Invoices() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-border">
+                <tr className="bg-surface-container-low border-b border-border">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Invoice</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Customer</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-secondary-text">Amount</th>
@@ -114,7 +114,7 @@ export default function Invoices() {
                   </tr>
                 ) : (
                   invoices.map((inv) => (
-                    <tr key={inv.id} className="border-b border-border hover:bg-gray-50 group">
+                    <tr key={inv.id} className="border-b border-border hover:bg-surface-container-low group">
                       <td className="px-4 py-3 text-xs text-secondary-text">{inv.invoice_number.replace('INV-', '')}</td>
                       <td className="px-4 py-3 text-primary-text">{inv.invoice_number}</td>
                       <td className="px-4 py-3 text-primary-text">{inv.customer_name}</td>
@@ -153,3 +153,6 @@ export default function Invoices() {
     </div>
   );
 }
+
+
+

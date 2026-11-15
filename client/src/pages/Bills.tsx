@@ -75,7 +75,7 @@ export default function Bills() {
         </Card>
         <Card className="p-4">
           <div className="text-xs font-semibold text-secondary-text">Paid This Month</div>
-          <div className="text-2xl font-bold text-green-600 tnum">
+          <div className="text-2xl font-bold text-green tnum">
             {formatMoneyIN(bills.filter(b => b.status === 'paid').reduce((s, b) => s + b.amount_paid, 0))}
           </div>
         </Card>
@@ -83,7 +83,7 @@ export default function Bills() {
 
       <div className="flex items-center gap-4 mb-4">
         <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-3 text-secondary-text" />
           <Input
             placeholder="Search by vendor or bill number..."
             value={search}
@@ -111,7 +111,7 @@ export default function Bills() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-border">
+                <tr className="bg-surface-container-low border-b border-border">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text w-10">#</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Bill Number</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Vendor</th>
@@ -139,7 +139,7 @@ export default function Bills() {
                   </tr>
                 ) : (
                   bills.map((bill) => (
-                    <tr key={bill.id} className="border-b border-border hover:bg-gray-50 group">
+                    <tr key={bill.id} className="border-b border-border hover:bg-surface-container-low group">
                       <td className="px-4 py-3 text-xs text-secondary-text">{bill.bill_number.replace('BILL-', '')}</td>
                       <td className="px-4 py-3 text-primary-text">{bill.bill_number}</td>
                       <td className="px-4 py-3 text-primary-text">{bill.vendor_name}</td>
@@ -184,3 +184,6 @@ export default function Bills() {
     </div>
   );
 }
+
+
+

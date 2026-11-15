@@ -86,15 +86,15 @@ export default function Reports() {
         {reportCards.map((report) => {
           const key = report.title.toLowerCase().replace(' ', '-');
           return (
-            <Card key={key} className={`cursor-pointer p-4 hover:bg-gray-50 transition-colors border ${
-              selected === key ? 'border-green-500 bg-green-50' : 'border-border'
+            <Card key={key} className={`cursor-pointer p-4 hover:bg-surface-container-low transition-colors border ${
+              selected === key ? 'border-green-500 bg-green/10' : 'border-border'
             }`} onClick={() => { setSelected(key); loadReport(key); }}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-primary-text">{report.title}</p>
                   <p className="text-xs text-secondary-text">{report.subtitle}</p>
                 </div>
-                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-secondary-text">
+                <div className="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary-text">
                   <report.icon size={16} />
                 </div>
               </div>
@@ -114,7 +114,7 @@ export default function Reports() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 {Object.entries(reportData.summary || {}).map(([k, v]: any) => (
-                  <div key={k} className="p-3 rounded-lg border border-border bg-gray-50">
+                  <div key={k} className="p-3 rounded-lg border border-border bg-surface-container-low">
                     <p className="text-xs text-secondary-text">{k.replace(/_/g, ' ')}</p>
                     <p className="text-lg font-bold tnum">{formatMoneyIN(v)}</p>
                   </div>
@@ -122,7 +122,7 @@ export default function Reports() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-surface-container-low">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Particulars</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-secondary-text">Amount (₹)</th>
@@ -150,3 +150,6 @@ export default function Reports() {
     </div>
   );
 }
+
+
+

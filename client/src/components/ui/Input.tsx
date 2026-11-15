@@ -12,7 +12,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, er
       {label && <label className="block text-sm font-medium text-primary-text">{label}</label>}
       <input
         ref={ref}
-        className={`block w-full px-3 py-2.5 border rounded-md bg-surface text-primary-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
+        className={`block w-full px-3 py-2.5 border rounded-md bg-surface text-primary-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-green focus:border-transparent transition-all ${
           error ? 'border-danger' : 'border-border'
         } ${className}`}
         {...props}
@@ -23,3 +23,4 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, er
   );
 });
 Input.displayName = 'Input';
+

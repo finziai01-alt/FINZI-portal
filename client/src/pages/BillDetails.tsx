@@ -67,7 +67,7 @@ export default function BillDetails() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/bills')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-gray-100 rounded-lg">
+          <button onClick={() => navigate('/bills')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-surface-container-low rounded-lg">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -148,7 +148,7 @@ export default function BillDetails() {
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
                 >
                   <option value="bank_transfer">Bank Transfer</option>
                   <option value="rtgs">RTGS</option>
@@ -180,14 +180,14 @@ export default function BillDetails() {
                 <h2 className="text-sm font-semibold">Payment Options</h2>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-gray-50">
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface-container-low">
                   <CreditCard size={20} className="text-secondary-text" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-primary-text">Pay via Bank</p>
                     <p className="text-xs text-secondary-text">Direct bank transfer from your registered account</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-gray-50">
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface-container-low">
                   <Mail size={20} className="text-secondary-text" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-primary-text">Generate Payment Advice</p>
@@ -202,3 +202,6 @@ export default function BillDetails() {
     </div>
   );
 }
+
+
+

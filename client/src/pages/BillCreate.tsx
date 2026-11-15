@@ -206,7 +206,7 @@ export default function BillCreate() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/bills')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-gray-100 rounded-lg">
+          <button onClick={() => navigate('/bills')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-surface-container-low rounded-lg">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -252,7 +252,7 @@ export default function BillCreate() {
                     setValue('vendor_name', v ? v.name : '');
                     setValue('vendor_gstin', v ? v.gstin : '');
                   }}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
                 >
                   <option value="">Select vendor</option>
                   {vendors.map((v) => (
@@ -284,7 +284,7 @@ export default function BillCreate() {
                 <label className="text-sm font-medium text-primary-text">Purchase Account</label>
                 <select
                   {...register('purchase_account')}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
                 >
                   <option value="">Select account</option>
                   {accounts.map((a) => (
@@ -304,7 +304,7 @@ export default function BillCreate() {
                 <label className="text-sm font-medium text-primary-text">Status</label>
                 <select
                   {...register('status')}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
                 >
                   <option value="draft">Draft</option>
                   <option value="unpaid">Unpaid</option>
@@ -336,7 +336,7 @@ export default function BillCreate() {
         <Card>
           <CardHeader className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <PlusCircle size={16} className="text-green-600" />
+              <PlusCircle size={16} className="text-green" />
               <h2 className="text-sm font-semibold">Line Items</h2>
             </div>
             <Button variant="outline" size="sm" onClick={addItem}>
@@ -446,3 +446,5 @@ export default function BillCreate() {
     </div>
   );
 }
+
+

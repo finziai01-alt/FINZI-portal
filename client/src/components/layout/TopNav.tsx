@@ -21,7 +21,7 @@ export const TopNav: React.FC = () => {
         <div className="hidden md:flex items-center gap-4 text-xs text-secondary-text">
           {breadcrumbs.map((b, i) => (
             <span key={i} className="flex items-center gap-1 cursor-pointer hover:text-primary-text transition-colors">
-              {i > 0 && <span className="text-gray-400">/</span>}
+              {i > 0 && <span className="text-secondary-text">/</span>}
               <Link to={b.path} className="hover:text-primary-text">{b.label}</Link>
             </span>
           ))}
@@ -29,18 +29,18 @@ export const TopNav: React.FC = () => {
 
         <div className="flex items-center gap-4 ml-auto">
           <div className="relative">
-            <div className="absolute left-3 top-3.5 text-gray-400">
+            <div className="absolute left-3 top-3.5 text-secondary-text">
               <Search size={16} />
             </div>
             <input
               type="text"
               placeholder="Search..."
-              className="w-64 pl-9 pr-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-64 pl-9 pr-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-green"
             />
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-md bg-gray-50 border border-border text-xs">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-md bg-surface-container-low border border-border text-xs">
               <span className="font-medium text-primary-text">{state.company?.legal_name || 'Company'}</span>
               <span className="text-secondary-text">• {state.company?.gstin || 'No GSTIN'}</span>
             </div>
@@ -48,20 +48,20 @@ export const TopNav: React.FC = () => {
             <select
               value={state.company?.id || ''}
               onChange={(e) => switchCompany(e.target.value)}
-              className="hidden sm:block px-2 py-1.5 text-xs border border-border rounded bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="hidden sm:block px-2 py-1.5 text-xs border border-border rounded bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-green"
             >
               {state.companies.map((c) => (
                 <option key={c.id} value={c.id}>{c.legal_name}</option>
               ))}
             </select>
 
-            <button className="p-2 text-secondary-text hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Notifications">
+            <button className="p-2 text-secondary-text hover:text-green hover:bg-green/10 rounded-lg transition-colors" title="Notifications">
               <Bell size={20} />
             </button>
-            <button className="p-2 text-secondary-text hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Help">
+            <button className="p-2 text-secondary-text hover:text-info hover:bg-info/10 rounded-lg transition-colors" title="Help">
               <HelpCircle size={20} />
             </button>
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-primary-text overflow-hidden">
+            <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-xs font-bold text-primary-text overflow-hidden">
               {state.user?.full_name?.[0] || 'U'}
             </div>
           </div>
@@ -70,3 +70,9 @@ export const TopNav: React.FC = () => {
     </nav>
   );
 };
+
+
+
+
+
+

@@ -7,23 +7,48 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Stitch Design System - Structural Anchor
         navy: '#101B2D',
+        // Stitch Design System - Financial Positive (Green)
         green: '#16A36A',
-        background: '#F5F7FA',
-        surface: '#FFFFFF',
-        'primary-text': '#172033',
-        'secondary-text': '#64748B',
-        border: '#E8EDF3',
+        // Stitch Design System - Background / Surface
+        background: '#f9f9ff',
+        surface: '#f9f9ff',
+        // Stitch Design System - Text
+        'primary-text': '#121b2e',
+        'secondary-text': '#45474c',
+        // Stitch Design System - Border / Outline
+        border: '#c5c6cd',
+        // Semantic
         success: '#16A36A',
         warning: '#E9A23B',
         danger: '#DC4C4C',
         info: '#3985D6',
+        // Stitch MD3 tokens
+        'surface-container-lowest': '#ffffff',
+        'surface-container-low': '#f1f3ff',
+        'surface-container': '#e9edff',
+        'surface-container-high': '#e1e8ff',
+        'surface-container-highest': '#d9e2fc',
+        'on-surface-variant': '#45474c',
+        'outline': '#75777d',
+        'outline-variant': '#c5c6cd',
+        'primary-container': '#111c2e',
+        'secondary': '#006d44',
+        'secondary-container': '#7df7b6',
+        'on-secondary-container': '#007147',
+        'error-container': '#ffdad6',
+        'on-error-container': '#93000a',
+        'on-surface': '#121b2e',
+        'on-background': '#121b2e',
+        'error': '#ba1a1a',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       fontSize: {
-        'xs': ['0.75rem', { lineHeight: '1rem' }],
+        'xs': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.02em' }],
         'sm': ['0.875rem', { lineHeight: '1.25rem' }],
         'base': ['1rem', { lineHeight: '1.5rem' }],
         'lg': ['1.125rem', { lineHeight: '1.75rem' }],
@@ -43,9 +68,12 @@ export default {
         '16': '4rem',
       },
       borderRadius: {
-        'sm': '0.375rem',
-        'md': '0.5rem',
-        'lg': '0.75rem',
+        'sm': '0.125rem',
+        'DEFAULT': '0.25rem',
+        'md': '0.375rem',
+        'lg': '0.5rem',
+        'xl': '0.75rem',
+        'full': '9999px',
       },
     },
   },

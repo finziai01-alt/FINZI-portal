@@ -148,7 +148,7 @@ export default function JournalEntryCreate() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/ledger')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-gray-100 rounded-lg">
+          <button onClick={() => navigate('/ledger')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-surface-container-low rounded-lg">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -167,18 +167,18 @@ export default function JournalEntryCreate() {
         </div>
       )}
 
-      <div className="mb-4 p-3 rounded-lg border border-border bg-gray-50 flex items-center justify-between">
+      <div className="mb-4 p-3 rounded-lg border border-border bg-surface-container-low flex items-center justify-between">
         <div>
           <p className="text-xs text-secondary-text">Total Debit</p>
           <p className="text-sm font-medium text-red-600 tnum">{formatMoneyIN(totals.debit)}</p>
         </div>
         <div>
           <p className="text-xs text-secondary-text">Total Credit</p>
-          <p className="text-sm font-medium text-green-600 tnum">{formatMoneyIN(totals.credit)}</p>
+          <p className="text-sm font-medium text-green tnum">{formatMoneyIN(totals.credit)}</p>
         </div>
         <div>
           <p className="text-xs font-medium text-secondary-text">Difference</p>
-          <p className={`text-sm font-medium ${balanced ? 'text-green-600' : 'text-danger'} tnum`}>
+          <p className={`text-sm font-medium ${balanced ? 'text-green' : 'text-danger'} tnum`}>
             {formatMoneyIN(totals.debit - totals.credit)} {balanced ? '✓ Balanced' : '✗ Not balanced'}
           </p>
         </div>
@@ -222,7 +222,7 @@ export default function JournalEntryCreate() {
         <Card>
           <CardHeader className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <PlusCircle size={16} className="text-green-600" />
+              <PlusCircle size={16} className="text-green" />
               <h2 className="text-sm font-semibold">Debit / Credit Lines</h2>
             </div>
             <Button variant="outline" size="sm" onClick={addLine}>
@@ -239,7 +239,7 @@ export default function JournalEntryCreate() {
                       <select
                         {...register(`lines.${index}.account_id`)}
                         onChange={(e) => accountChanged(index, e.target.value)}
-                        className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
                       >
                         <option value="">Select account</option>
                         {accounts.map((a) => (
@@ -302,3 +302,6 @@ export default function JournalEntryCreate() {
     </div>
   );
 }
+
+
+

@@ -69,7 +69,7 @@ export default function Audit() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-border">
+                    <tr className="bg-surface-container-low border-b border-border">
                       <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Engagement</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Client</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Type</th>
@@ -87,7 +87,7 @@ export default function Audit() {
                       </tr>
                     ) : (
                       engagements.map((eng) => (
-                        <tr key={eng.id} className="border-b border-border hover:bg-gray-50">
+                        <tr key={eng.id} className="border-b border-border hover:bg-surface-container-low">
                           <td className="px-4 py-3 text-primary-text">{eng.engagement_name || 'Engagement'}</td>
                           <td className="px-4 py-3 text-xs text-secondary-text">{eng.client_name || '—'}</td>
                           <td className="px-4 py-3 text-xs text-secondary-text capitalize">{eng.engagement_type || 'statutory'}</td>
@@ -112,28 +112,28 @@ export default function Audit() {
               <h2 className="text-sm font-semibold">Quick Actions</h2>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-gray-50">
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface-container-low">
                 <Shield size={20} className="text-secondary-text" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-primary-text">Create Engagement</p>
                   <p className="text-xs text-secondary-text">Start a new audit engagement</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-gray-50">
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface-container-low">
                 <FileCheck size={20} className="text-secondary-text" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-primary-text">Upload Evidence</p>
                   <p className="text-xs text-secondary-text">Add audit evidence documents</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-gray-50">
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface-container-low">
                 <BookOpen size={20} className="text-secondary-text" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-primary-text">Working Papers</p>
                   <p className="text-xs text-secondary-text">Prepare audit working papers</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-gray-50">
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface-container-low">
                 <AlertTriangle size={20} className="text-secondary-text" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-primary-text">Observations</p>
@@ -147,3 +147,4 @@ export default function Audit() {
     </div>
   );
 }
+

@@ -67,14 +67,14 @@ export default function Banking() {
         </Card>
         <Card className="p-4">
           <div className="text-xs font-semibold text-secondary-text">Reconciled</div>
-          <div className="text-2xl font-bold text-green-600 tnum">
+          <div className="text-2xl font-bold text-green tnum">
             {transactions.filter(t => t.status === 'reconciled').length}
           </div>
         </Card>
       </div>
 
       <div className="relative max-w-md mb-4">
-        <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+        <Search size={16} className="absolute left-3 top-3 text-secondary-text" />
         <Input
           placeholder="Search transactions..."
           value={search}
@@ -91,7 +91,7 @@ export default function Banking() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-border">
+                <tr className="bg-surface-container-low border-b border-border">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Date</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text">Description</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-secondary-text">Amount</th>
@@ -109,7 +109,7 @@ export default function Banking() {
                   </tr>
                 ) : (
                   transactions.map((tx) => (
-                    <tr key={tx.id} className="border-b border-border hover:bg-gray-50">
+                    <tr key={tx.id} className="border-b border-border hover:bg-surface-container-low">
                       <td className="px-4 py-3 text-xs text-secondary-text">{tx.transaction_date}</td>
                       <td className="px-4 py-3 text-primary-text">{tx.description}</td>
                       <td className="px-4 py-3 text-right text-primary-text tnum">
@@ -135,3 +135,6 @@ export default function Banking() {
     </div>
   );
 }
+
+
+

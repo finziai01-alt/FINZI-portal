@@ -15,12 +15,12 @@ const kpiConfig: Array<{
   icon: React.ElementType;
   color: string;
 }> = [
-  { label: 'Total Receivables', value: '₹0', change: '+6.4%', trend: 'up', icon: CreditCard, color: 'text-green-600' },
-  { label: 'Total Payables', value: '₹0', change: '-4.2%', trend: 'down', icon: Banknote, color: 'text-green-600' },
-  { label: 'Cash & Bank Balance', value: '₹0', change: '+12.8%', trend: 'up', icon: Banknote, color: 'text-green-600' },
-  { label: 'Total Revenue (YTD)', value: '₹0', change: '+18.5%', trend: 'up', icon: TrendingUp, color: 'text-green-600' },
+  { label: 'Total Receivables', value: '₹0', change: '+6.4%', trend: 'up', icon: CreditCard, color: 'text-green' },
+  { label: 'Total Payables', value: '₹0', change: '-4.2%', trend: 'down', icon: Banknote, color: 'text-green' },
+  { label: 'Cash & Bank Balance', value: '₹0', change: '+12.8%', trend: 'up', icon: Banknote, color: 'text-green' },
+  { label: 'Total Revenue (YTD)', value: '₹0', change: '+18.5%', trend: 'up', icon: TrendingUp, color: 'text-green' },
   { label: 'Total Expenses (YTD)', value: '₹0', change: '+8.1%', trend: 'up', icon: FileText, color: 'text-red-600' },
-  { label: 'Net Profit', value: '₹0', change: '+24.2%', trend: 'up', margin: '35.1%', icon: TrendingUp, color: 'text-green-600' },
+  { label: 'Net Profit', value: '₹0', change: '+24.2%', trend: 'up', margin: '35.1%', icon: TrendingUp, color: 'text-green' },
 ];
 
 export default function Dashboard() {
@@ -81,7 +81,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-1 mt-2">
-                <span className={`text-xs font-medium ${kpi.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-xs font-medium ${kpi.trend === 'up' ? 'text-green' : 'text-red-600'}`}>
                   {kpi.trend === 'up' ? '↑' : '↓'} {kpi.change}
                 </span>
                 {kpi.margin && <span className="text-xs text-secondary-text ml-2">• {kpi.margin} margin</span>}
@@ -135,7 +135,7 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {(data?.recent_activity || []).slice(0, 6).map((item: any) => (
                   <div key={item.id} className="flex items-start gap-3 p-3 border-b border-border last:border-0">
-                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-secondary-text shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-surface-container-low flex items-center justify-center text-xs text-secondary-text shrink-0">
                       {item.actor?.[0] || '?'}
                     </div>
                     <div className="flex-1">
@@ -168,3 +168,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+

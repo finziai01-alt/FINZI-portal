@@ -46,7 +46,7 @@ export default function App() {
     return (
       <div className="flex h-screen items-center justify-center bg-navy">
         <div className="flex flex-col items-center gap-4 text-white">
-          <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
+          <div className="w-12 h-12 bg-green rounded-lg flex items-center justify-center">
             <span className="font-bold text-lg">F</span>
           </div>
           <h1 className="text-xl font-bold">FINZI AI</h1>
@@ -90,3 +90,4 @@ export default function App() {
     </Routes>
   );
 }
+
