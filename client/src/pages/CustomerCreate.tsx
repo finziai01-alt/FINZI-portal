@@ -1,9 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  customersCreate, customersGet, customersUpdate,
-} from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { customersCreate, customersGet, customersUpdate } from '../services/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
@@ -30,7 +27,6 @@ const customerSchema = z.object({
 type CustomerForm = z.infer<typeof customerSchema>;
 
 export default function CustomerCreate() {
-  const { state } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
@@ -98,8 +94,8 @@ export default function CustomerCreate() {
   if (loading) {
     return (
       <div className="p-6">
-        <div className="animate-pulse bg-surface border border-border rounded-lg p-8 h-64 flex items-center justify-center">
-          <div className="text-secondary-text">Loading...</div>
+        <div className="bg-surface-container-lowest border border-outline rounded-lg p-8 h-64 flex items-center justify-center animate-pulse">
+          <div className="text-on-surface-variant">Loading...</div>
         </div>
       </div>
     );
@@ -109,85 +105,85 @@ export default function CustomerCreate() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/invoices')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-surface-container-low rounded-lg">
+      <div className="flex items-center justify-between mb-space-md">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate('/invoices')} className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg">
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold">{isEdit ? 'Edit Customer' : 'Create Customer'}</h1>
-            <p className="text-secondary-text">Manage your customer master data with GSTIN and PAN.</p>
+            <h1 className="text-2xl font-bold text-on-surface">{isEdit ? 'Edit Customer' : 'Create Customer'}</h1>
+            <p className="text-on-surface-variant">Manage your customer master data with GSTIN and PAN.</p>
           </div>
         </div>
         <Button type="submit" form="customer-form" variant="green" disabled={saving} className="px-5">
-          {saving ? 'Saving...' : <><Save size={16} className="mr-2" /> {isEdit ? 'Update' : 'Create'} Customer</>}
+          {saving ? 'Saving...' : <><Save size={16} className="text-on-secondary" /> {isEdit ? 'Update' : 'Create'} Customer</>}
         </Button>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-md bg-danger/10 border border-danger/20 text-danger text-sm">
+        <div className="mb-space-md p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm">
           {error}
         </div>
       )}
 
-      <form id="customer-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form id="customer-form" onSubmit={handleSubmit(onSubmit)} className="space-y-space-md">
         <Card>
           <CardHeader>
-            <h2 className="text-sm font-semibold flex items-center gap-2">
-              <PlusCircle size={16} className="text-green" />
+            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight flex items-center gap-2">
+              <PlusCircle size={16} className="text-secondary" />
               Customer Information
             </h2>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Customer Name <span className="text-danger">*</span></label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Customer Name <span className="text-error">*</span></label>
                 <Input {...register('name')} error={errors.name?.message} />
-                {errors.name?.message && <p className="text-xs text-danger">{errors.name.message}</p>}
+                {errors.name?.message && <p className="text-xs text-error">{errors.name.message}</p>}
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Trade Name</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Trade Name</label>
                 <Input {...register('trade_name')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">GSTIN</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">GSTIN</label>
                 <Input {...register('gstin')} placeholder="22AAAAA0000A1Z5" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">PAN</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">PAN</label>
                 <Input {...register('pan')} placeholder="ABCDE1234F" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Category</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Category</label>
                 <Input {...register('category')} placeholder="e.g. Retail Customer" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Payment Terms</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Payment Terms</label>
                 <Input {...register('payment_terms')} placeholder="e.g. Net 30" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Address</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Address</label>
                 <Input {...register('address')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">City</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">City</label>
                 <Input {...register('city')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">State</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">State</label>
                 <Input {...register('state')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Pincode</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Pincode</label>
                 <Input {...register('pincode')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Contact Email</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Contact Email</label>
                 <Input type="email" {...register('contact_email')} error={errors.contact_email?.message} />
-                {errors.contact_email?.message && <p className="text-xs text-danger">{errors.contact_email.message}</p>}
+                {errors.contact_email?.message && <p className="text-xs text-error">{errors.contact_email.message}</p>}
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Contact Phone</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Contact Phone</label>
                 <Input {...register('contact_phone')} placeholder="+91 98765 43210" />
               </div>
             </div>
@@ -197,5 +193,3 @@ export default function CustomerCreate() {
     </div>
   );
 }
-
-

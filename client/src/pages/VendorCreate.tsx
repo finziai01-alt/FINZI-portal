@@ -1,9 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  vendorsCreate, vendorsGet, vendorsUpdate,
-} from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { vendorsCreate, vendorsGet, vendorsUpdate } from '../services/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
@@ -31,7 +28,6 @@ const vendorSchema = z.object({
 type VendorForm = z.infer<typeof vendorSchema>;
 
 export default function VendorCreate() {
-  const { state } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
@@ -101,8 +97,8 @@ export default function VendorCreate() {
   if (loading) {
     return (
       <div className="p-6">
-        <div className="animate-pulse bg-surface border border-border rounded-lg p-8 h-64 flex items-center justify-center">
-          <div className="text-secondary-text">Loading...</div>
+        <div className="bg-surface-container-lowest border border-outline rounded-lg p-8 h-64 flex items-center justify-center animate-pulse">
+          <div className="text-on-surface-variant">Loading...</div>
         </div>
       </div>
     );
@@ -112,90 +108,90 @@ export default function VendorCreate() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/bills')} className="p-2 text-secondary-text hover:text-primary-text hover:bg-surface-container-low rounded-lg">
+      <div className="flex items-center justify-between mb-space-md">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate('/bills')} className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg">
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold">{isEdit ? 'Edit Vendor' : 'Create Vendor'}</h1>
-            <p className="text-secondary-text">Manage your supplier master data with GSTIN and PAN.</p>
+            <h1 className="text-2xl font-bold text-on-surface">{isEdit ? 'Edit Vendor' : 'Create Vendor'}</h1>
+            <p className="text-on-surface-variant">Manage your supplier master data with GSTIN and PAN.</p>
           </div>
         </div>
         <Button type="submit" form="vendor-form" variant="green" disabled={saving} className="px-5">
-          {saving ? 'Saving...' : <><Save size={16} className="mr-2" /> {isEdit ? 'Update' : 'Create'} Vendor</>}
+          {saving ? 'Saving...' : <><Save size={16} className="text-on-secondary" /> {isEdit ? 'Update' : 'Create'} Vendor</>}
         </Button>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-md bg-danger/10 border border-danger/20 text-danger text-sm">
+        <div className="mb-space-md p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm">
           {error}
         </div>
       )}
 
-      <form id="vendor-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form id="vendor-form" onSubmit={handleSubmit(onSubmit)} className="space-y-space-md">
         <Card>
           <CardHeader>
-            <h2 className="text-sm font-semibold flex items-center gap-2">
-              <PlusCircle size={16} className="text-green" />
+            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight flex items-center gap-2">
+              <PlusCircle size={16} className="text-secondary" />
               Vendor Information
             </h2>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Vendor Name <span className="text-danger">*</span></label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Vendor Name <span className="text-error">*</span></label>
                 <Input {...register('name')} error={errors.name?.message} />
-                {errors.name?.message && <p className="text-xs text-danger">{errors.name.message}</p>}
+                {errors.name?.message && <p className="text-xs text-error">{errors.name.message}</p>}
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Trade Name</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Trade Name</label>
                 <Input {...register('trade_name')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">GSTIN</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">GSTIN</label>
                 <Input {...register('gstin')} placeholder="22AAAAA0000A1Z5" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">PAN</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">PAN</label>
                 <Input {...register('pan')} placeholder="ABCDE1234F" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Category</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Category</label>
                 <Input {...register('category')} placeholder="e.g. Raw Material Supplier" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Payment Terms</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Payment Terms</label>
                 <Input {...register('payment_terms')} placeholder="e.g. Net 30" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Address</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Address</label>
                 <Input {...register('address')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">City</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">City</label>
                 <Input {...register('city')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">State</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">State</label>
                 <Input {...register('state')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Pincode</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Pincode</label>
                 <Input {...register('pincode')} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Contact Email</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Contact Email</label>
                 <Input type="email" {...register('contact_email')} error={errors.contact_email?.message} />
-                {errors.contact_email?.message && <p className="text-xs text-danger">{errors.contact_email.message}</p>}
+                {errors.contact_email?.message && <p className="text-xs text-error">{errors.contact_email.message}</p>}
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text">Contact Phone</label>
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface">Contact Phone</label>
                 <Input {...register('contact_phone')} placeholder="+91 98765 43210" />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary-text flex items-center gap-2">
-                  <input type="checkbox" {...register('is_msme')} className="rounded border-border text-green focus:ring-green" />
+              <div className="space-y-space-sm">
+                <label className="text-sm font-medium text-on-surface flex items-center gap-2">
+                  <input type="checkbox" {...register('is_msme')} className="rounded border-border text-secondary focus:ring-secondary" />
                   MSME Registered
                 </label>
               </div>
@@ -206,5 +202,3 @@ export default function VendorCreate() {
     </div>
   );
 }
-
-

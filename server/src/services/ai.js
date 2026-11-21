@@ -24,8 +24,17 @@ const NVIDIA_VOICE_MODEL = process.env.NVIDIA_VOICE_MODEL || 'nvidia/nemotron-vo
 const USER_FRIENDLY_BUSY_MESSAGE =
   "Server Busy hold just a minute";
 
+// A key is only real when it is present and not the placeholder shipped in .env.
+function realKey(value) {
+  const key = String(value || '').trim();
+  if (!key) return false;
+  if (/^(your[-_])/i.test(key)) return false;
+  if (/^(placeholder|changeme|xxx+)/i.test(key)) return false;
+  return true;
+}
+
 function isConfigured() {
-  return Boolean(GEMINI_API_KEY || NVIDIA_API_KEY);
+  return Boolean(realKey(GEMINI_API_KEY) || realKey(NVIDIA_API_KEY));
 }
 
 function buildDefaultSystemPrompt(companyData) {
@@ -43,7 +52,7 @@ Rules:
 /* Google Gemini adapter                                              */
 /* ------------------------------------------------------------------ */
 async function callGemini({ system, messages }) {
-  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY not set');
+  if (!realKey(GEMINI_API_KEY)) throw new Error('GEMINI_API_KEY not set');
   const history = messages.filter((m) => m.role !== 'system');
   const contents = history.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
@@ -74,7 +83,7 @@ async function callGemini({ system, messages }) {
 /* NVIDIA NIM adapter                                                 */
 /* ------------------------------------------------------------------ */
 async function callNvidia({ system, messages, model }) {
-  if (!NVIDIA_API_KEY) throw new Error('NVIDIA_API_KEY not set');
+  if (!realKey(NVIDIA_API_KEY)) throw new Error('NVIDIA_API_KEY not set');
   const response = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {

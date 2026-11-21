@@ -17,9 +17,19 @@ const statusStyles: Record<string, string> = {
   approved: 'bg-green/10 text-green',
 };
 
-export const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-  const className = `inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium capitalize ${statusStyles[status] || statusStyles.draft}`;
-  return <span className={className}>{status}</span>;
+export const StatusBadge: React.FC<React.HTMLAttributes<HTMLSpanElement> & { status: string }> = ({
+  status,
+  className,
+  ...props
+}) => {
+  const badgeClass = `inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium capitalize ${
+    statusStyles[status] || statusStyles.draft
+  }`;
+  return (
+    <span className={`${badgeClass} ${className || ''}`} {...props}>
+      {status.replace(/_/g, ' ')}
+    </span>
+  );
 };
 
 

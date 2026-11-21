@@ -1,264 +1,399 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import {
-  aiConversationsList, aiMessagesGet, aiMessageSend, aiApprovalsList,
+  aiApprovalsList,
+  aiConversationsCreate,
+  aiConversationsList,
+  aiMessageSend,
+  aiMessagesGet,
 } from '../services/api';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Bot, Send, MessageCircle, Check, AlertTriangle, Clock, Mic, MicOff, Volume2, VolumeOff } from 'lucide-react';
-import { formatMoneyIN } from '../utils/format';
+import {
+  AlertTriangle,
+  Bot,
+  Clock,
+  MessageCircle,
+  Mic,
+  MicOff,
+  Send,
+  Volume2,
+} from 'lucide-react';
+import { formatDateIN, formatMoneyIN } from '../utils/format';
+
+interface SpeechRecognitionAlternativeLike {
+  transcript: string;
+}
+
+interface SpeechRecognitionResultLike {
+  readonly [index: number]: SpeechRecognitionAlternativeLike;
+  readonly length: number;
+}
+
+interface SpeechRecognitionResultsLike {
+  readonly [index: number]: SpeechRecognitionResultLike;
+  readonly length: number;
+}
+
+interface SpeechRecognitionEventLike {
+  readonly results: SpeechRecognitionResultsLike;
+}
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionConstructor;
+  webkitSpeechRecognition?: SpeechRecognitionConstructor;
+};
+
+interface SuggestedAction {
+  label?: string;
+  description?: string;
+}
+
+const parseSuggestedActions = (value: unknown): SuggestedAction[] => {
+  if (Array.isArray(value)) return value as SuggestedAction[];
+  if (typeof value !== 'string') return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed as SuggestedAction[] : [];
+  } catch {
+    return [];
+  }
+};
 
 export default function AI() {
-  const { state } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
+  const [approvals, setApprovals] = useState<any[]>([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [approvalsLoading, setApprovalsLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceSpeaking, setVoiceSpeaking] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const approvalsRef = useRef<HTMLDivElement>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  // Voice capabilities availability
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const speechWindow = window as SpeechRecognitionWindow;
+  const SpeechRecognitionConstructor =
+    speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
   const speechSynthesis = window.speechSynthesis;
-
-  useEffect(() => {
-    loadConversations();
-
-    // Initialize speech synthesis
-    if (speechSynthesis) {
-      synthRef.current = speechSynthesis;
-      synthRef.current.onvoiceschanged = () => {
-        // Voices loaded
-      };
-    }
-
-    // Initialize speech recognition
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = false;
-      rec.lang = 'en-IN'; // English (India)
-      rec.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        setVoiceListening(false);
-      };
-      rec.onerror = (event: SpeechRecognitionEvent) => {
-        console.error('Speech recognition error', event.error);
-        setVoiceError('Voice input not available. Use keyboard instead.');
-        setVoiceListening(false);
-      };
-      rec.onend = () => {
-        setVoiceListening(false);
-      };
-      recognitionRef.current = rec;
-    } else {
-      setVoiceError('Voice input not supported in this browser.');
-    }
-
-    return () => {
-      if (synthRef.current) synthRef.current.cancel();
-      if (recognitionRef.current) recognitionRef.current.abort();
-    };
-  }, []);
+  const voiceInputAvailable = Boolean(SpeechRecognitionConstructor);
+  const voiceOutputAvailable = Boolean(speechSynthesis);
 
   const loadConversations = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
       const res = await aiConversationsList();
-      setConversations(res.data.conversations || []);
-      if (res.data.conversations && res.data.conversations.length > 0) {
-        setCurrentConvId(res.data.conversations[0].id);
-        loadMessages(res.data.conversations[0].id);
+      const loadedConversations = res.data?.conversations || [];
+      setConversations(loadedConversations);
+
+      if (loadedConversations.length > 0) {
+        setCurrentConvId(loadedConversations[0].id);
+        await loadMessages(loadedConversations[0].id);
       }
-    } catch {}
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Could not load conversations.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadMessages = async (convId: string) => {
     try {
       const res = await aiMessagesGet(convId);
-      setMessages(res.data.messages || []);
-    } catch {}
+      setMessages(res.data?.messages || []);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Could not load this conversation.');
+    }
   };
 
+  const loadApprovals = async () => {
+    setApprovalsLoading(true);
+
+    try {
+      const res = await aiApprovalsList();
+      setApprovals(res.data?.approval_requests || []);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Could not load approval requests.');
+    } finally {
+      setApprovalsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadConversations();
+    loadApprovals();
+
+    if (speechSynthesis) {
+      synthRef.current = speechSynthesis;
+    }
+
+    if (SpeechRecognitionConstructor) {
+      const recognition = new SpeechRecognitionConstructor();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-IN';
+      recognition.onresult = (event: SpeechRecognitionEventLike) => {
+        const transcript = event.results[0]?.[0]?.transcript?.trim();
+        if (transcript) setInput(transcript);
+        setVoiceListening(false);
+      };
+      recognition.onerror = () => {
+        setVoiceError('Voice input could not start. Use the keyboard instead.');
+        setVoiceListening(false);
+      };
+      recognition.onend = () => setVoiceListening(false);
+      recognitionRef.current = recognition;
+    }
+
+    const unsupported: string[] = [];
+    if (!SpeechRecognitionConstructor) unsupported.push('Voice input is not supported in this browser.');
+    if (!speechSynthesis) unsupported.push('Voice output is not supported in this browser.');
+    if (unsupported.length > 0) setVoiceError(unsupported.join(' '));
+
+    return () => {
+      synthRef.current?.cancel();
+      recognitionRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const speakText = useCallback((text: string) => {
-    if (!synthRef.current || voiceSpeaking) return;
+    if (!synthRef.current || synthRef.current.speaking) return;
+
     const cleanText = text.replace(/[^\w\s.,!?-]/g, ' ').slice(0, 500);
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'en-IN';
     utterance.rate = 1;
     utterance.pitch = 1;
-    // Prefer Indian English voice if available
-    const voices = synthRef.current.getVoices();
-    const indianVoice = voices.find(
-      (v) => v.lang.startsWith('en-IN') || v.name.toLowerCase().includes('indian')
-    );
+
+    const indianVoice = synthRef.current
+      .getVoices()
+      .find((voice) => voice.lang.startsWith('en-IN') || voice.name.toLowerCase().includes('indian'));
     if (indianVoice) utterance.voice = indianVoice;
+
     utterance.onstart = () => setVoiceSpeaking(true);
     utterance.onend = () => setVoiceSpeaking(false);
     utterance.onerror = () => setVoiceSpeaking(false);
-    utteranceRef.current = utterance;
     synthRef.current.speak(utterance);
-  }, [voiceSpeaking]);
-
-  const stopSpeaking = useCallback(() => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-      setVoiceSpeaking(false);
-    }
   }, []);
 
-  const startListening = useCallback(() => {
-    if (!recognitionRef.current) return;
-    setVoiceError(null);
-    setVoiceListening(true);
-    recognitionRef.current.start();
-  }, []);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.abort();
-      setVoiceListening(false);
-    }
-  }, []);
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    setSending(true);
-    stopSpeaking();
-    try {
-      await aiMessageSend({ conversation_id: currentConvId!, content: input });
-      setInput('');
-    } catch {}
-    setSending(false);
-  };
-
-  const handleSendVoice = async () => {
-    if (!input.trim()) return;
-    setSending(true);
-    stopSpeaking();
-    try {
-      await aiMessageSend({ conversation_id: currentConvId!, content: input });
-      setInput('');
-    } catch {}
-    setSending(false);
-  };
-
-  // Speak the latest assistant message when it arrives
   useEffect(() => {
-    const last = messages[messages.length - 1];
-    if (last && last.role === 'assistant' && voiceEnabled && !voiceSpeaking) {
-      speakText(last.content);
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.role === 'assistant' && voiceEnabled && !voiceSpeaking) {
+      speakText(lastMessage.content);
     }
   }, [messages, voiceEnabled, voiceSpeaking, speakText]);
+
+  const stopSpeaking = () => {
+    synthRef.current?.cancel();
+    setVoiceSpeaking(false);
+  };
+
+  const startListening = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) {
+      setVoiceError('Voice input is not supported in this browser. Use the keyboard instead.');
+      return;
+    }
+
+    setVoiceError(null);
+    setVoiceListening(true);
+
+    try {
+      recognition.start();
+    } catch {
+      setVoiceListening(false);
+      setVoiceError('Voice input could not start. Use the keyboard instead.');
+    }
+  };
+
+  const stopListening = () => {
+    recognitionRef.current?.abort();
+    setVoiceListening(false);
+  };
+
+  const createConversation = async () => {
+    if (creating) return;
+
+    setCreating(true);
+    setError(null);
+    setMessages([]);
+
+    const title = `Session ${formatDateIN(new Date().toISOString())}`;
+
+    try {
+      const res = await aiConversationsCreate({ title });
+      const conversationId = res.data?.conversationId;
+      if (!conversationId) throw new Error('The server did not return a conversation ID.');
+
+      setConversations((current) => [
+        {
+          id: conversationId,
+          title,
+          updated_at: new Date().toISOString(),
+          last_message: '',
+        },
+        ...current,
+      ]);
+      setCurrentConvId(conversationId);
+      setMessages([]);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Could not create a conversation.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const showApprovals = async () => {
+    await loadApprovals();
+    approvalsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleSend = async (event: FormEvent) => {
+    event.preventDefault();
+    const content = input.trim();
+    if (!content || !currentConvId) return;
+
+    setSending(true);
+    setError(null);
+    stopSpeaking();
+
+    try {
+      await aiMessageSend({ conversation_id: currentConvId, content });
+      setInput('');
+      await loadMessages(currentConvId);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Could not send this message.');
+    } finally {
+      setSending(false);
+    }
+  };
 
   if (loading) {
     return (
       <div className="p-6">
-        <div className="animate-pulse bg-surface border border-border rounded-lg p-8 h-64 flex items-center justify-center">
-          <div className="text-secondary-text">Loading...</div>
+        <div className="bg-surface-container-lowest border border-outline rounded-lg p-8 h-64 flex items-center justify-center animate-pulse">
+          <div className="text-on-surface-variant">Loading...</div>
         </div>
       </div>
     );
   }
 
-  const voiceAvailable = Boolean(SpeechRecognition && speechSynthesis);
-
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
         <div>
-          <h1 className="text-2xl font-bold">FINZI AI Assistant</h1>
-          <p className="text-secondary-text">
+          <h1 className="text-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">FINZI AI Assistant</h1>
+          <p className="text-body-md text-body-md text-on-surface-variant">
             AI-powered accounting assistance with human approval workflow.{' '}
-            {voiceAvailable ? 'Voice input & output enabled.' : 'Voice not supported in this browser.'}
+            {voiceInputAvailable ? 'Voice input is available.' : 'Voice input is unavailable in this browser.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {voiceAvailable && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setVoiceEnabled(!voiceEnabled)}
-                className={`text-xs ${voiceEnabled ? 'bg-green/10 text-green border-secondary' : ''}`}
-              >
-                <Volume2 size={12} className="mr-1" /> Voice Output
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={voiceListening ? stopListening : startListening}
-                disabled={voiceListening}
-                className={`text-xs ${voiceListening ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' : ''}`}
-              >
-                {voiceListening ? (
-                  <>
-                    <MicOff size={12} className="mr-1" />
-                    <span>Listening…</span>
-                  </>
-                ) : (
-                  <>
-                    <Mic size={12} className="mr-1" />
-                    <span>Voice Input</span>
-                  </>
-                )}
-              </Button>
-            </>
+        <div className="flex items-center gap-space-sm">
+          {voiceOutputAvailable && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setVoiceEnabled((enabled) => !enabled)}
+              className={`text-xs ${voiceEnabled ? 'bg-secondary-container/40 text-secondary border-secondary' : ''}`}
+            >
+              <Volume2 size={12} className="text-on-surface-variant mr-1" /> Voice Output
+            </Button>
           )}
-          <Button variant="outline" size="sm">New Conversation</Button>
-          <Button variant="green" size="sm">View Approvals</Button>
+          {voiceInputAvailable && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={voiceListening ? stopListening : startListening}
+              className={`text-xs ${voiceListening ? 'bg-error-container/40 text-error border-error animate-pulse' : ''}`}
+            >
+              {voiceListening ? (
+                <><MicOff size={12} className="text-error mr-1" /> Stop Listening</>
+              ) : (
+                <><Mic size={12} className="text-on-surface-variant mr-1" /> Voice Input</>
+              )}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={createConversation} disabled={creating}>
+            {creating ? 'Creating...' : 'New Conversation'}
+          </Button>
+          <Button variant="green" size="sm" onClick={showApprovals} disabled={approvalsLoading}>
+            {approvalsLoading ? 'Loading...' : 'View Approvals'}
+          </Button>
         </div>
       </div>
 
-      {voiceError && (
-        <div className="mb-4 p-3 rounded-md bg-surface-container-low border border-outline text-secondary-text text-sm flex items-center gap-2">
-          <AlertTriangle size={14} />
-          {voiceError}
+      {(error || voiceError) && (
+        <div className="mb-space-md p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm flex items-center gap-space-sm">
+          <AlertTriangle size={14} className="text-secondary shrink-0" />
+          {error || voiceError}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-160px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md h-[calc(100vh-160px)]">
         <div className="lg:col-span-4 h-full">
           <Card className="h-full flex flex-col">
-            <CardHeader className="pb-3">
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <MessageCircle size={16} /> Conversations
+            <CardHeader className="pb-space-sm">
+              <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight flex items-center gap-2">
+                <MessageCircle size={16} className="text-secondary" /> Conversations
               </h2>
             </CardHeader>
             <CardContent className="p-0 flex-1 overflow-y-auto">
-              <div className="space-y-1">
-                {loading ? (
-                  <div className="p-4 text-center text-secondary-text animate-pulse">Loading...</div>
-                ) : conversations.length === 0 ? (
-                  <div className="p-4 text-center text-secondary-text">
+              <div className="space-y-space-sm">
+                {conversations.length === 0 ? (
+                  <div className="p-4 text-center text-on-surface-variant">
                     <p>No conversations yet</p>
-                    <Button variant="outline" size="sm" className="w-full mt-2">Start New</Button>
+                    <Button variant="outline" size="sm" className="w-full mt-space-sm" onClick={createConversation} disabled={creating}>
+                      Start New
+                    </Button>
                   </div>
                 ) : (
-                  conversations.map((conv) => (
+                  conversations.map((conversation) => (
                     <div
-                      key={conv.id}
-                      onClick={() => { setCurrentConvId(conv.id); loadMessages(conv.id); }}
-                      className={`p-3 cursor-pointer border-b border-border hover:bg-surface-container-low ${
-                        currentConvId === conv.id ? 'bg-green/10 border-secondary' : ''
-                      }`}
+                      key={conversation.id}
+                      onClick={() => {
+                        setCurrentConvId(conversation.id);
+                        setError(null);
+                        loadMessages(conversation.id);
+                      }}
+                      className={`p-3 cursor-pointer border-b border-outline hover:bg-surface-container-low ${currentConvId === conversation.id ? 'bg-secondary-container/40 border-secondary' : ''}`}
                     >
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-primary-text truncate">{conv.title}</p>
-                        <p className="text-xs text-secondary-text">{new Date(conv.updated_at).toLocaleDateString()}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-on-surface truncate">{conversation.title}</p>
+                          <p className="text-xs text-on-surface-variant">{formatDateIN(conversation.updated_at) || '—'}</p>
+                        </div>
+                        <p className="text-xs text-on-surface-variant truncate mt-space-xs">{conversation.last_message || 'No messages'}</p>
                       </div>
-                      <p className="text-xs text-secondary-text truncate mt-1">{conv.last_message || 'No messages'}</p>
                     </div>
                   ))
                 )}
@@ -270,121 +405,130 @@ export default function AI() {
         <div className="lg:col-span-8 h-full flex flex-col">
           {currentConvId ? (
             <>
-              <Card className="flex-1 flex flex-col border-t-0">
-                <CardHeader className="pb-3 border-b-0">
+              <Card className="flex-1 flex flex-col border-t border-outline">
+                <CardHeader className="pb-space-sm border-b border-outline">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Bot size={16} className="text-green" />
-                      <h2 className="text-sm font-semibold">FINZI AI</h2>
+                      <Bot size={16} className="text-secondary" />
+                      <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">FINZI AI</h2>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-secondary-text">Powered by FINZI AI</span>
+                    <div className="flex items-center gap-space-sm">
+                      <span className="text-xs text-on-surface-variant">Powered by FINZI AI</span>
                       {voiceSpeaking && (
-                        <span className="flex items-center gap-1 text-xs text-green">
-                          <Volume2 size={12} /> Speaking
+                        <span className="flex items-center gap-1 text-xs text-secondary shrink-0">
+                          <Volume2 size={12} className="text-secondary" /> Speaking
                         </span>
                       )}
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                <CardContent className="flex-1 overflow-y-auto p-space-md space-y-space-sm">
                   {messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-secondary-text">
-                      <Bot size={48} opacity={0.3} className="mb-3" />
+                    <div className="flex flex-col items-center justify-center h-full text-on-surface-variant">
+                      <Bot size={48} opacity={0.3} className="text-on-surface-variant mb-space-sm" />
                       <p>Start a conversation with FINZI AI</p>
                     </div>
                   ) : (
                     <>
                       <div ref={messagesEndRef} />
-                      {messages.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[80%] p-3 rounded-lg ${
-                            msg.role === 'user'
-                              ? 'bg-green text-white rounded-tl-none'
-                              : 'bg-surface-container-low text-primary-text rounded-tr-none'
-                          }`}>
-                            <p className="text-sm">{msg.content}</p>
-                            {msg.role === 'assistant' && voiceEnabled && voiceSpeaking === false && (
-                              <Button
-                                key="speak"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => speakText(msg.content)}
-                                className="mt-2 text-xs"
-                              >
-                                <Volume2 size={12} className="mr-1" /> Speak
-                              </Button>
-                            )}
-                            {msg.role === 'assistant' && msg.suggested_actions && (
-                              <div className="mt-2 flex gap-2">
-                                {Array.isArray(msg.suggested_actions) ? msg.suggested_actions.slice(0, 3).map((a: any, i: number) => (
-                                  <Button key={i} variant="outline" size="sm" onClick={() => {}}>
-                                    {a.label || 'Action'}
-                                  </Button>
-                                )) : null}
-                              </div>
-                            )}
+                      {messages.map((message) => {
+                        const suggestedActions = parseSuggestedActions(message.suggested_actions);
+
+                        return (
+                          <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] p-3 rounded-lg ${message.role === 'user' ? 'bg-secondary text-on-secondary rounded-tl-none' : 'bg-surface-container-low text-on-surface rounded-tr-none'}`}>
+                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                              {message.role === 'assistant' && voiceEnabled && !voiceSpeaking && (
+                                <Button key="speak" variant="outline" size="sm" onClick={() => speakText(message.content)} className="mt-space-sm text-xs">
+                                  <Volume2 size={12} className="text-on-surface-variant mr-1" /> Speak
+                                </Button>
+                              )}
+                              {message.role === 'assistant' && suggestedActions.length > 0 && (
+                                <div className="mt-space-sm flex flex-wrap gap-space-sm">
+                                  {suggestedActions.slice(0, 3).map((action, index) => {
+                                    const actionText = action.description || action.label || 'Action';
+                                    return (
+                                      <Button
+                                        key={`${message.id}-${index}`}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setInput(actionText)}
+                                      >
+                                        {actionText}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </>
                   )}
                 </CardContent>
-                <div className="border-t border-border p-3 bg-surface">
-                  <form onSubmit={handleSend} className="flex gap-2">
+                <div className="border-t border-outline p-space-md bg-surface-container-low">
+                  <form onSubmit={handleSend} className="flex gap-space-sm">
                     <Input
                       placeholder={voiceListening ? 'Listening…' : 'Ask FINZI AI about your accounts, GST, or book a task...'}
                       value={input}
-                      onChange={(e) => setInput(e.target.value)}
+                      onChange={(event) => setInput(event.target.value)}
                       className="flex-1"
                     />
-                    <Button type="submit" variant="green" disabled={sending} className="px-4">
-                      {sending ? '' : <Send size={16} />}
+                    <Button type="submit" variant="green" disabled={sending || !input.trim()} className="px-4">
+                      {sending ? '' : <Send size={16} className="text-on-secondary" />}
                     </Button>
-                    {voiceAvailable && voiceListening && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={stopListening}
-                        className="text-red-600 hover:bg-red-50"
-                        title="Stop listening"
-                      >
-                        <MicOff size={14} />
-                      </Button>
-                    )}
                   </form>
                 </div>
               </Card>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-secondary-text">
-              <Bot size={48} opacity={0.3} className="mb-4" />
-              <p>Select a conversation to start</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant">
+              <Bot size={48} opacity={0.3} className="text-on-surface-variant mb-space-sm" />
+              <p>Select a conversation or start a new one</p>
+              <Button variant="outline" size="sm" className="mt-space-sm" onClick={createConversation} disabled={creating}>
+                Start New
+              </Button>
             </div>
           )}
         </div>
       </div>
 
-      <div className="mt-6">
+      <div ref={approvalsRef} className="mt-space-md scroll-mt-6">
         <Card>
           <CardHeader>
-            <h2 className="text-sm font-semibold">Pending AI Approvals</h2>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-center py-8 text-secondary-text">
-              <Clock size={32} opacity={0.4} className="mb-2" />
-              <p>No pending approvals</p>
-              <p className="text-xs mt-1">AI-suggested actions appear here for your review</p>
+            <div className="flex items-center justify-between gap-space-md">
+              <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">AI Approval Requests</h2>
+              <span className="text-xs text-on-surface-variant">
+                {approvals.filter((request) => request.status === 'pending').length} pending
+              </span>
             </div>
+          </CardHeader>
+          <CardContent className="space-y-space-sm">
+            {approvals.length === 0 ? (
+              <div className="text-center py-space-xl text-on-surface-variant">
+                <Clock size={32} opacity={0.4} className="mb-2 text-on-surface-variant shrink-0" />
+                <p>{approvalsLoading ? 'Loading approval requests...' : 'No approval requests'}</p>
+                <p className="text-xs text-on-surface-variant mt-space-xs">AI-suggested actions remain pending until a person decides</p>
+              </div>
+            ) : (
+              approvals.map((request) => (
+                <div key={request.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-space-md rounded-lg border border-outline bg-surface-container-low">
+                  <div>
+                    <p className="text-sm font-medium text-on-surface">{request.description}</p>
+                    <p className="text-xs text-on-surface-variant mt-space-xs">
+                      {request.request_type || 'AI action'} · {formatDateIN(request.created_at) || 'Date unavailable'} · {formatMoneyIN(request.amount || 0)}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium text-secondary">
+                    {String(request.status || 'pending').replace(/_/g, ' ')}
+                  </span>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
-
-
-
-
-

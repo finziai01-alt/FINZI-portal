@@ -18,7 +18,7 @@ const {
   isConfigured: gstnConfigured,
 } = require('./services/tax-filing');
 const { sendReminder, isEmailConfigured, isSmsConfigured } = require('./services/notification');
-const { generateResponse, isConfigured: aiConfigured } = require('./services/ai');
+const { generateResponse, buildDefaultSystemPrompt, isConfigured: aiConfigured } = require('./services/ai');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -122,6 +122,25 @@ app.use((req, res, next) => { console.log(`${new Date().toISOString()} ${req.met
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'finzi-ai-server', timestamp: new Date().toISOString() }));
 
+// Integration readiness, read from the server environment so the UI never claims a live service
+app.get('/api/integrations/status', authenticateToken, (req, res) => {
+  const isSet = (value) => {
+    if (typeof value !== 'string') return false;
+    const v = value.trim();
+    if (!v) return false;
+    return !/^(your[_-]|replace|changeme|xxx|<|placeholder)/i.test(v);
+  };
+  res.json({
+    integrations: [
+      { key: 'gstn', label: 'GSTN gateway for direct filing', configured: isSet(process.env.GSTN_CLIENT_ID) && isSet(process.env.GSTN_CLIENT_SECRET) },
+      { key: 'ocr', label: 'Document OCR extraction', configured: isSet(process.env.OCR_ACCESS_KEY_ID) && isSet(process.env.OCR_SECRET_ACCESS_KEY) },
+      { key: 'email', label: 'Email notifications', configured: isSet(process.env.EMAIL_API_KEY) },
+      { key: 'sms', label: 'SMS notifications', configured: isSet(process.env.SMS_API_KEY) || (isSet(process.env.TWILIO_ACCOUNT_SID) && isSet(process.env.TWILIO_AUTH_TOKEN)) },
+      { key: 'ai', label: 'FINZI AI model providers', configured: isSet(process.env.GEMINI_API_KEY) || isSet(process.env.NVIDIA_API_KEY) },
+    ],
+  });
+});
+
 // ============================================================
 // AUTH
 // ============================================================
@@ -161,7 +180,7 @@ app.post('/api/auth/register', [
     const permissions = getPermissionsForRole(ownerRole ? ownerRole.id : '');
     const tokenPayload = { userId, email, role: 'user', userRole: 'workspace_owner', companyId, permissions };
     const accessToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-    res.status(201).json({ message: 'Registration successful. Please verify your email.', user: { id: userId, email, full_name, phone, role: 'user' }, token: accessToken, requiresVerification: true });
+    res.status(201).json({ message: 'Registration successful.', user: { id: userId, email, full_name, phone, role: 'user' }, token: accessToken });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Registration failed' });
   }
 });
@@ -215,6 +234,18 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
     companies,
     permissions,
   });
+});
+
+app.post('/api/auth/change-password', authenticateToken, [body('current_password').notEmpty(), body('new_password').isLength({ min: 8 }), handleValidation], (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!bcrypt.compareSync(current_password, user.password_hash)) return res.status(401).json({ error: 'Current password is not correct' });
+    db.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?').run(bcrypt.hashSync(new_password, BCRYPT_SALT_ROUNDS), nowStr(), user.id);
+    db.prepare('INSERT INTO activity_logs (id, user_id, action, entity_type, entity_id, details, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, ?, ?)').run(req.user.userId, 'password_changed', 'users', user.id, JSON.stringify({}), nowStr());
+    res.json({ message: 'Password updated' });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Could not update the password' }); }
 });
 
 app.post('/api/auth/forgot-password', [body('email').isEmail().normalizeEmail(), handleValidation], (req, res) => {
@@ -272,7 +303,7 @@ app.post('/api/auth/switch-company', authenticateToken, [body('company_id').notE
 // ============================================================
 
 app.get('/api/companies', authenticateToken, (req, res) => {
-  const memberships = db.prepare(`SELECT cm.*, c.legal_name, c.trade_name, c.gstin, c.pan, c.state, c.city, c.is_active, c.created_at FROM company_members cm JOIN companies c ON c.id = cm.company_id WHERE cm.user_id = ? AND cm.status = 'active'`).all(req.user.userId);
+  const memberships = db.prepare(`SELECT cm.*, r.name as role_name, c.legal_name, c.trade_name, c.gstin, c.pan, c.state, c.city, c.is_active, c.created_at FROM company_members cm JOIN companies c ON c.id = cm.company_id LEFT JOIN roles r ON r.id = cm.role_id WHERE cm.user_id = ? AND cm.status = 'active'`).all(req.user.userId);
   res.json({ companies: memberships });
 });
 
@@ -334,9 +365,13 @@ app.get('/api/dashboard/summary', authenticateToken, requireCompanyAccess, (req,
   const totalReceivables = invoices.reduce((s, inv) => s + parseFloat(inv.balance_due || 0), 0);
   const totalPayables = bills.reduce((s, bill) => s + parseFloat(bill.balance_due || 0), 0);
   const totalBankBalance = bankAccounts.reduce((s, ba) => s + parseFloat(ba.book_balance || 0), 0);
-  const totalRevenue = invoices.reduce((s, inv) => s + parseFloat(inv.grand_total || 0), 0);
-  const totalExpenses = bills.reduce((s, bill) => s + parseFloat(bill.grand_total || 0), 0);
-  const netProfit = totalRevenue - totalExpenses;
+
+  // Revenue and expenses come from the posted ledger, so the dashboard agrees with the
+  // P&L report: output GST is a liability and input GST is an asset, not income or expense.
+  const pl = profitLossFromMovements(accountMovements(companyId));
+  const totalRevenue = pl.totalIncome;
+  const totalExpenses = pl.totalExpenses;
+  const netProfit = pl.netProfit;
   const activities = db.prepare(`SELECT al.*, u.email, up.full_name FROM activity_logs al LEFT JOIN users u ON u.id = al.user_id LEFT JOIN user_profiles up ON up.user_id = u.id WHERE al.company_id = ? ORDER BY al.created_at DESC LIMIT 10`).all(companyId);
 
   // Real period-over-period change: current calendar month vs previous calendar month
@@ -345,22 +380,62 @@ app.get('/api/dashboard/summary', authenticateToken, requireCompanyAccess, (req,
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
   const inPeriod = (iso, from, to) => { const d = new Date(iso); return d >= from && d < to; };
-  const revThis = invoices.filter(i => inPeriod(i.created_at, monthStart, now)).reduce((s, i) => s + parseFloat(i.grand_total || 0), 0);
-  const revPrev = invoices.filter(i => inPeriod(i.created_at, prevMonthStart, prevMonthEnd)).reduce((s, i) => s + parseFloat(i.grand_total || 0), 0);
-  const expThis = bills.filter(b => inPeriod(b.created_at, monthStart, now)).reduce((s, b) => s + parseFloat(b.grand_total || 0), 0);
-  const expPrev = bills.filter(b => inPeriod(b.created_at, prevMonthStart, prevMonthEnd)).reduce((s, b) => s + parseFloat(b.grand_total || 0), 0);
   const pctChange = (cur, prev) => prev === 0 ? null : ((cur - prev) / Math.abs(prev)) * 100;
   const fmtChange = (p) => p === null ? null : `${p >= 0 ? '+' : ''}${p.toFixed(1)}% vs last month`;
 
+  // Monthly series for the last 6 calendar months, read from posted journal entry lines
+  const monthBuckets = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    monthBuckets.push({
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: `${d.toLocaleString('en-IN', { month: 'short' })} ${String(d.getFullYear()).slice(2)}`,
+      revenue: 0,
+      expenses: 0,
+    });
+  }
+  const bucketFor = (key) => monthBuckets.find((b) => b.key === key);
+  const monthlyRows = db.prepare(`
+    SELECT strftime('%Y-%m', je.entry_date) AS month,
+           a.account_group AS grp,
+           SUM(jel.debit_amount) AS debit,
+           SUM(jel.credit_amount) AS credit
+    FROM journal_entry_lines jel
+    JOIN journal_entries je ON je.id = jel.journal_entry_id
+    JOIN accounts a ON a.id = jel.account_id
+    WHERE je.company_id = ? AND je.status = 'posted' AND a.account_group IN ('income','expense')
+    GROUP BY month, grp
+  `).all(companyId);
+  for (const row of monthlyRows) {
+    const b = bucketFor(row.month);
+    if (!b) continue;
+    const debit = parseFloat(row.debit || 0);
+    const credit = parseFloat(row.credit || 0);
+    if (row.grp === 'income') b.revenue += credit - debit;
+    else b.expenses += debit - credit;
+  }
+  const monthly = monthBuckets.map((b) => ({ label: b.label, revenue: b.revenue, expenses: b.expenses, net: b.revenue - b.expenses }));
+
+  const revThis = monthly[monthly.length - 1].revenue;
+  const revPrev = monthly[monthly.length - 2].revenue;
+  const expThis = monthly[monthly.length - 1].expenses;
+  const expPrev = monthly[monthly.length - 2].expenses;
+
+  const recvThis = invoices.filter(i => inPeriod(i.invoice_date || i.created_at, monthStart, now)).reduce((s, i) => s + parseFloat(i.balance_due || 0), 0);
+  const recvPrev = invoices.filter(i => inPeriod(i.invoice_date || i.created_at, prevMonthStart, prevMonthEnd)).reduce((s, i) => s + parseFloat(i.balance_due || 0), 0);
+  const payThis = bills.filter(b => inPeriod(b.invoice_date || b.created_at, monthStart, now)).reduce((s, b) => s + parseFloat(b.balance_due || 0), 0);
+  const payPrev = bills.filter(b => inPeriod(b.invoice_date || b.created_at, prevMonthStart, prevMonthEnd)).reduce((s, b) => s + parseFloat(b.balance_due || 0), 0);
+
   res.json({
     kpis: [
-      { label: 'Total Receivables', value: formatMoneyIN(totalReceivables), change: fmtChange(pctChange(totalReceivables, totalPayables)), trend: 'up' },
-      { label: 'Total Payables', value: formatMoneyIN(totalPayables), change: fmtChange(pctChange(totalPayables, totalReceivables)), trend: 'down' },
-      { label: 'Cash & Bank Balance', value: formatMoneyIN(totalBankBalance), change: null, trend: 'up' },
-      { label: 'Total Revenue (YTD)', value: formatMoneyIN(totalRevenue), change: fmtChange(pctChange(revThis, revPrev)), trend: 'up' },
-      { label: 'Total Expenses (YTD)', value: formatMoneyIN(totalExpenses), change: fmtChange(pctChange(expThis, expPrev)), trend: 'up' },
-      { label: 'Net Profit', value: formatMoneyIN(netProfit), change: null, trend: netProfit >= 0 ? 'up' : 'down', margin: totalRevenue > 0 ? `${((netProfit / totalRevenue) * 100).toFixed(1)}%` : null }
+      { label: 'Total receivables', value: formatMoneyIN(totalReceivables), change: fmtChange(pctChange(recvThis, recvPrev)), trend: 'up' },
+      { label: 'Total payables', value: formatMoneyIN(totalPayables), change: fmtChange(pctChange(payThis, payPrev)), trend: 'down' },
+      { label: 'Cash and bank balance', value: formatMoneyIN(totalBankBalance), change: null, trend: 'up' },
+      { label: 'Total revenue', value: formatMoneyIN(totalRevenue), change: fmtChange(pctChange(revThis, revPrev)), trend: 'up' },
+      { label: 'Total expenses', value: formatMoneyIN(totalExpenses), change: fmtChange(pctChange(expThis, expPrev)), trend: 'up' },
+      { label: 'Net profit', value: formatMoneyIN(netProfit), change: null, trend: netProfit >= 0 ? 'up' : 'down', margin: totalRevenue > 0 ? `${((netProfit / totalRevenue) * 100).toFixed(1)}%` : null }
     ],
+    monthly,
     receivables: invoices.filter(i => i.balance_due > 0).map(i => ({ id: i.id, invoice_number: i.invoice_number, customer_name: i.customer_name, amount: parseFloat(i.balance_due), due_date: i.due_date, status: i.status })),
     payables: bills.filter(b => b.balance_due > 0).map(b => ({ id: b.id, bill_number: b.bill_number, vendor_name: b.vendor_name, amount: parseFloat(b.balance_due), due_date: b.due_date, status: b.status })),
     recent_activity: activities.map(a => ({ id: a.id, actor: a.full_name || a.email, action: a.action, entity: a.entity_type, time: a.created_at })),
@@ -1352,6 +1427,14 @@ app.get('/api/reports/payables-ageing', authenticateToken, requireCompanyAccess,
 function getUserOrgIds(userId) {
   return db.prepare(`SELECT DISTINCT c.organization_id FROM company_members cm JOIN companies c ON c.id = cm.company_id WHERE cm.user_id = ? AND cm.status = 'active'`).all(userId).map(r => r.organization_id);
 }
+// Engagement IDs owned by the user's organizations. Child audit records
+// (evidence, working papers, observations) are scoped through their engagement.
+function getUserEngagementIds(userId) {
+  const orgIds = getUserOrgIds(userId);
+  if (orgIds.length === 0) return [];
+  const placeholders = orgIds.map(() => '?').join(',');
+  return db.prepare(`SELECT ae.id FROM audit_engagements ae JOIN clients c ON c.id = ae.client_id WHERE c.firm_id IN (${placeholders})`).all(...orgIds).map(r => r.id);
+}
 app.get('/api/audit/engagements', authenticateToken, (req, res) => {
   const orgIds = getUserOrgIds(req.user.userId);
   if (orgIds.length === 0) return res.json({ audit_engagements: [] });
@@ -1374,21 +1457,26 @@ app.post('/api/audit/engagements', authenticateToken, requirePermission('create_
 });
 app.get('/api/audit/engagements/:id', authenticateToken, (req, res) => {
   const engagement = db.prepare('SELECT * FROM audit_engagements WHERE id = ?').get(req.params.id);
-  if (!engagement) return res.status(404).json({ error: 'Engagement not found' });
+  if (!engagement || !getUserEngagementIds(req.user.userId).includes(engagement.id)) return res.status(404).json({ error: 'Engagement not found' });
   res.json({ audit_engagement: engagement });
 });
 app.get('/api/audit/evidence', authenticateToken, (req, res) => {
-  const { engagement_id } = req.query; let sql = `SELECT * FROM audit_evidence`; const params = [];
-  if (engagement_id) { sql += ` WHERE engagement_id = ?`; params.push(engagement_id); }
-  sql += ` ORDER BY upload_date DESC`;
-  const evidence = db.prepare(sql).all(...params);
+  const allowed = getUserEngagementIds(req.user.userId);
+  const { engagement_id } = req.query;
+  if (engagement_id) {
+    if (!allowed.includes(engagement_id)) return res.json({ audit_evidence: [] });
+    return res.json({ audit_evidence: db.prepare('SELECT * FROM audit_evidence WHERE engagement_id = ? ORDER BY upload_date DESC').all(engagement_id) });
+  }
+  if (allowed.length === 0) return res.json({ audit_evidence: [] });
+  const placeholders = allowed.map(() => '?').join(',');
+  const evidence = db.prepare(`SELECT * FROM audit_evidence WHERE engagement_id IN (${placeholders}) ORDER BY upload_date DESC`).all(...allowed);
   res.json({ audit_evidence: evidence });
 });
 app.post('/api/audit/evidence', authenticateToken, upload.single('file'), [body('engagement_id').notEmpty(), body('document_name').trim().notEmpty(), body('category').notEmpty(), handleValidation], (req, res) => {
   try {
     const { engagement_id, document_name, category, source, linked_wp_area } = req.body;
-    // Security check: valid engagement ID required
-    if (!db.prepare('SELECT id FROM audit_engagements WHERE id = ?').get(engagement_id)) return res.status(404).json({ error: 'Engagement not found' });
+    // Security check: engagement must belong to one of the user's organizations
+    if (!getUserEngagementIds(req.user.userId).includes(engagement_id)) return res.status(403).json({ error: 'Engagement not found in your organization' });
     const ts = nowStr(); const evidenceId = genId(); const evidenceNumber = `EVD-${Date.now()}`;
     let filePath = null, fileHash = null;
     if (req.file) {
@@ -1405,20 +1493,26 @@ app.post('/api/audit/evidence', authenticateToken, upload.single('file'), [body(
 });
 app.put('/api/audit/evidence/:id', authenticateToken, [body('verification_status').isIn(['pending', 'auditor_verified', 'under_review', 'discrepancy_flagged']), handleValidation], (req, res) => {
   const ev = db.prepare('SELECT * FROM audit_evidence WHERE id = ?').get(req.params.id);
-  if (!ev) return res.status(404).json({ error: 'Evidence not found' });
+  if (!ev || !getUserEngagementIds(req.user.userId).includes(ev.engagement_id)) return res.status(404).json({ error: 'Evidence not found' });
   db.prepare('UPDATE audit_evidence SET verification_status = ? WHERE id = ?').run(req.body.verification_status, req.params.id);
   res.json({ message: 'Evidence status updated' });
 });
 app.get('/api/audit/working-papers', authenticateToken, (req, res) => {
-  const { engagement_id } = req.query; let sql = `SELECT * FROM working_papers`; const params = [];
-  if (engagement_id) { sql += ` WHERE engagement_id = ?`; params.push(engagement_id); }
-  sql += ` ORDER BY wp_number`;
-  const papers = db.prepare(sql).all(...params);
+  const allowed = getUserEngagementIds(req.user.userId);
+  const { engagement_id } = req.query;
+  if (engagement_id) {
+    if (!allowed.includes(engagement_id)) return res.json({ working_papers: [] });
+    return res.json({ working_papers: db.prepare('SELECT * FROM working_papers WHERE engagement_id = ? ORDER BY wp_number').all(engagement_id) });
+  }
+  if (allowed.length === 0) return res.json({ working_papers: [] });
+  const placeholders = allowed.map(() => '?').join(',');
+  const papers = db.prepare(`SELECT * FROM working_papers WHERE engagement_id IN (${placeholders}) ORDER BY wp_number`).all(...allowed);
   res.json({ working_papers: papers });
 });
 app.post('/api/audit/working-papers', authenticateToken, [body('engagement_id').notEmpty(), body('wp_number').trim().notEmpty(), body('audit_area').trim().notEmpty(), handleValidation], (req, res) => {
   try {
     const { engagement_id, wp_number, audit_area, objective, procedure, evidence_references, auditor_conclusion } = req.body;
+    if (!getUserEngagementIds(req.user.userId).includes(engagement_id)) return res.status(403).json({ error: 'Engagement not found in your organization' });
     const ts = nowStr(); const id = genId();
     db.prepare(`INSERT INTO working_papers (id, engagement_id, wp_number, audit_area, objective, procedure, evidence_references, auditor_conclusion, approval_status, version, prepared_by, prepared_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?)`).run(id, engagement_id, wp_number, audit_area, objective || null, procedure || null, evidence_references || null, auditor_conclusion || null, req.user.userId, ts);
     res.status(201).json({ message: 'Working paper created', id, wp_number });
@@ -1427,7 +1521,7 @@ app.post('/api/audit/working-papers', authenticateToken, [body('engagement_id').
 });
 app.put('/api/audit/working-papers/:id', authenticateToken, [body('approval_status').isIn(['draft', 'submitted', 'reviewed', 'approved', 'rejected']), handleValidation], (req, res) => {
   const wp = db.prepare('SELECT * FROM working_papers WHERE id = ?').get(req.params.id);
-  if (!wp) return res.status(404).json({ error: 'Working paper not found' });
+  if (!wp || !getUserEngagementIds(req.user.userId).includes(wp.engagement_id)) return res.status(404).json({ error: 'Working paper not found' });
   const status = req.body.approval_status;
   const ts = nowStr();
   const updates = { approval_status: status };
@@ -1438,10 +1532,15 @@ app.put('/api/audit/working-papers/:id', authenticateToken, [body('approval_stat
   res.json({ message: 'Working paper updated', approval_status: status });
 });
 app.get('/api/audit/observations', authenticateToken, (req, res) => {
-  const { engagement_id } = req.query; let sql = `SELECT * FROM audit_observations`; const params = [];
-  if (engagement_id) { sql += ` WHERE engagement_id = ?`; params.push(engagement_id); }
-  sql += ` ORDER BY created_at DESC`;
-  const observations = db.prepare(sql).all(...params);
+  const allowed = getUserEngagementIds(req.user.userId);
+  const { engagement_id } = req.query;
+  if (engagement_id) {
+    if (!allowed.includes(engagement_id)) return res.json({ audit_observations: [] });
+    return res.json({ audit_observations: db.prepare('SELECT * FROM audit_observations WHERE engagement_id = ? ORDER BY created_at DESC').all(engagement_id) });
+  }
+  if (allowed.length === 0) return res.json({ audit_observations: [] });
+  const placeholders = allowed.map(() => '?').join(',');
+  const observations = db.prepare(`SELECT * FROM audit_observations WHERE engagement_id IN (${placeholders}) ORDER BY created_at DESC`).all(...allowed);
   res.json({ audit_observations: observations });
 });
 app.post('/api/audit/observations', authenticateToken, [
@@ -1452,7 +1551,7 @@ app.post('/api/audit/observations', authenticateToken, [
 ], (req, res) => {
   try {
     const { engagement_id, title, description, observation_type, severity, amount_involved, sa_reference } = req.body;
-    if (!db.prepare('SELECT id FROM audit_engagements WHERE id = ?').get(engagement_id)) return res.status(404).json({ error: 'Engagement not found' });
+    if (!getUserEngagementIds(req.user.userId).includes(engagement_id)) return res.status(403).json({ error: 'Engagement not found in your organization' });
     const ts = nowStr(); const id = genId(); const observationNumber = `OBS-${Date.now()}`;
     db.prepare(`INSERT INTO audit_observations (id, engagement_id, observation_id, title, description, observation_type, severity, amount_involved, sa_reference, auditor_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, engagement_id, observationNumber, title, description || null, observation_type, severity, parseMoney(amount_involved) || 0, sa_reference || null, req.user.userId, ts, ts);
     res.status(201).json({ message: 'Observation recorded', id, observation_id: observationNumber });
@@ -1461,7 +1560,7 @@ app.post('/api/audit/observations', authenticateToken, [
 });
 app.put('/api/audit/observations/:id', authenticateToken, [body('status').isIn(['open', 'in_review', 'responded', 'resolved', 'closed']), handleValidation], (req, res) => {
   const obs = db.prepare('SELECT * FROM audit_observations WHERE id = ?').get(req.params.id);
-  if (!obs) return res.status(404).json({ error: 'Observation not found' });
+  if (!obs || !getUserEngagementIds(req.user.userId).includes(obs.engagement_id)) return res.status(404).json({ error: 'Observation not found' });
   const updates = { status: req.body.status, updated_at: nowStr() };
   if (req.body.manager_response !== undefined) updates.manager_response = req.body.manager_response;
   if (req.body.approved_conclusion !== undefined) updates.approved_conclusion = req.body.approved_conclusion;
@@ -1563,7 +1662,10 @@ app.post('/api/ai/message', authenticateToken, requireCompanyAccess, [body('conv
           created_at: ts,
         },
       });
-    })();
+    })().catch((err) => {
+      console.error('AI message failed:', err);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to process message' });
+    });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to process message' });
   }
 });

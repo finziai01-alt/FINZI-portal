@@ -15,11 +15,15 @@ export const Card: React.FC<CardProps> = ({ children, header, footer, className,
   );
 };
 
-export const CardHeader: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
-  <div className="px-4 py-3">{children}</div>
+export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, className, ...props }) => (
+  <div className={`px-4 py-3 ${className || ''}`} {...props}>
+    {children}
+  </div>
 );
 
-export const CardContent: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
-  <div className="px-4 py-4">{children}</div>
+export const CardContent: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, className, ...props }) => (
+  <div className={`px-4 py-4 ${className || ''}`} {...props}>
+    {children}
+  </div>
 );
 

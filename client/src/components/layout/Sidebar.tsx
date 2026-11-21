@@ -2,134 +2,207 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
-  LayoutDashboard, Building, Users, FileText, CreditCard, Banknote,
-  Shield, Search, Mail, BarChart3, Activity, Bot, Settings,
-  HelpCircle, User, ChevronLeft, LogOut, BookOpen, FileCheck,
-  AlertTriangle, TrendingUp, PieChart
+  LayoutDashboard,
+  Building,
+  Users,
+  FileText,
+  CreditCard,
+  BookOpen,
+  Banknote,
+  Shield,
+  Bot,
+  Settings,
+  LifeBuoy,
+  ChevronLeft,
+  LogOut,
+  FileCheck,
+  AlertTriangle,
+  Workflow,
+  ClipboardList,
+  ScrollText,
 } from 'lucide-react';
 
 const navItems = [
-  { group: 'WORKSPACE', items: [
-    { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { key: 'companies', label: 'Companies', icon: Building, path: '/companies' },
-    { key: 'clients', label: 'Clients', icon: Users, path: '/clients' },
-  ]},
-  { group: 'ACCOUNTING', items: [
-    { key: 'bills', label: 'Bills & Expenses', icon: FileText, path: '/bills' },
-    { key: 'invoices', label: 'Sales & Invoices', icon: CreditCard, path: '/invoices' },
-    { key: 'ledger', label: 'Ledger & Accounts', icon: BookOpen, path: '/ledger' },
-    { key: 'banking', label: 'Banking', icon: Banknote, path: '/banking' },
-    { key: 'tax', label: 'Tax & Compliance', icon: FileCheck, path: '/tax' },
-    { key: 'reports', label: 'Financial Reports', icon: BarChart3, path: '/reports' },
-  ]},
-  { group: 'AUDIT', items: [
-    { key: 'audit', label: 'Audit Workspace', icon: Shield, path: '/audit' },
-    { key: 'evidence', label: 'Evidence & Papers', icon: FileCheck, path: '/audit/evidence' },
-    { key: 'audit-reports', label: 'Audit Reports', icon: Activity, path: '/audit/reports' },
-  ]},
-  { group: 'INTELLIGENCE', items: [
-    { key: 'finzi-ai', label: 'FINZI AI', icon: Bot, path: '/ai' },
-    { key: 'automations', label: 'Automations', icon: TrendingUp, path: '/automations' },
-    { key: 'reminders', label: 'Reminders', icon: AlertTriangle, path: '/reminders' },
-  ]},
-  { group: 'ADMINISTRATION', items: [
-    { key: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
-    { key: 'team', label: 'Team Management', icon: Users, path: '/settings/team' },
-    { key: 'roles', label: 'Roles & Permissions', icon: Shield, path: '/settings/roles' },
-    { key: 'activity', label: 'Activity Logs', icon: Activity, path: '/settings/activity' },
-  ]},
+  {
+    group: 'Workspace',
+    items: [
+      { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+      { label: 'Companies', icon: Building, path: '/companies' },
+      { label: 'Clients', icon: Users, path: '/clients' },
+    ],
+  },
+  {
+    group: 'Accounting',
+    items: [
+      { label: 'Bills and expenses', icon: FileText, path: '/bills' },
+      { label: 'Sales and invoices', icon: CreditCard, path: '/invoices' },
+      { label: 'Ledger and accounts', icon: BookOpen, path: '/ledger' },
+      { label: 'Banking', icon: Banknote, path: '/banking' },
+      { label: 'Tax and compliance', icon: FileCheck, path: '/tax' },
+      { label: 'Financial reports', icon: ScrollText, path: '/reports' },
+    ],
+  },
+  {
+    group: 'Audit',
+    items: [
+      { label: 'Audit workspace', icon: Shield, path: '/audit' },
+      { label: 'Evidence and papers', icon: ClipboardList, path: '/audit/evidence' },
+      { label: 'Working papers', icon: ScrollText, path: '/audit/working-papers' },
+    ],
+  },
+  {
+    group: 'Intelligence',
+    items: [
+      { label: 'FINZI AI', icon: Bot, path: '/ai' },
+      { label: 'Automations', icon: Workflow, path: '/automations' },
+      { label: 'Reminders', icon: AlertTriangle, path: '/reminders' },
+    ],
+  },
 ];
 
-export const Sidebar: React.FC = () => {
-  const { state, switchCompany } = useAuth();
+export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
+  const { state, switchCompany, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [collapsed, setCollapsed] = React.useState(false);
 
-  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
+  const isActive = (path: string) =>
+    location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path + '/'));
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const userName = state.user?.full_name || state.user?.email || 'User';
+  const roleName = state.companies.find((c) => c.id === state.company?.id)?.role_name || 'Member';
 
   return (
-    <aside className={`fixed left-0 top-0 h-screen border-r border-border bg-surface-container-lowest text-on-surface z-50 transition-all duration-300 ${
-      collapsed ? 'w-16' : 'w-64'
-    }`}>
-      <div className="flex items-center justify-between h-16 px-4 bg-surface-container-lowest border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-green rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">F</span>
+    <aside
+      className={`fixed left-0 top-0 h-screen bg-primary-container text-inverse-on-surface z-50 flex flex-col transition-all duration-300 ${
+        collapsed ? 'w-[72px]' : 'w-[260px]'
+      }`}
+    >
+      <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 bg-secondary rounded-md flex items-center justify-center shrink-0">
+            <span className="text-on-secondary font-bold text-base">F</span>
           </div>
-          {!collapsed && <span className="font-bold text-lg tracking-tight">FINZI AI</span>}
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="text-sm font-bold tracking-tight text-white leading-tight">FINZI AI</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-on-primary-container leading-tight">
+                Enterprise terminal
+              </p>
+            </div>
+          )}
         </div>
         <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-2 text-secondary-text hover:text-white"
+          onClick={onToggle}
+          className="p-1.5 rounded text-on-primary-container hover:text-white hover:bg-white/10 transition-colors"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? <ChevronLeft size={18} /> : <ChevronLeft size={18} rotate={180} />}
+          <ChevronLeft size={16} className={collapsed ? '' : 'rotate-180'} />
         </button>
       </div>
 
-      <div className="overflow-y-auto h-[calc(100vh-160px)] p-3">
+      {!collapsed && state.companies.length > 0 && (
+        <div className="px-3 pt-3 shrink-0">
+          <label className="block text-[10px] uppercase tracking-[0.14em] text-on-primary-container font-semibold mb-1.5">
+            Company
+          </label>
+          <select
+            value={state.company?.id || ''}
+            onChange={(e) => switchCompany(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-secondary"
+          >
+            {state.companies.map((c) => (
+              <option key={c.id} value={c.id} className="text-on-surface">
+                {c.legal_name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 font-code-mono text-code-mono text-on-primary-container truncate">
+            {state.company?.gstin || 'GSTIN pending'}
+          </p>
+        </div>
+      )}
+
+      <nav className="flex-1 overflow-y-auto px-3 py-3">
         {navItems.map((group) => (
           <div key={group.group} className="mb-4">
-            <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2 px-2">{group.group}</h3>
-            <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-on-primary-container font-semibold mb-1.5 px-3">
+              {group.group}
+            </p>
+            <div className="space-y-0.5">
               {group.items.map((item) => {
                 const active = isActive(item.path);
                 const Icon = item.icon;
                 return (
                   <button
-                    key={item.key}
+                    key={item.path}
                     onClick={() => navigate(item.path)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    title={collapsed ? item.label : undefined}
+                    className={`w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
                       active
-                        ? 'bg-green/10 text-green border-r-2 border-green'
-                        : 'text-secondary-text hover:bg-surface-container-low/50 hover:text-white'
+                        ? 'bg-secondary text-on-secondary font-semibold'
+                        : 'text-[#c7d2e6] hover:bg-white/5 hover:text-white'
                     }`}
                   >
-                    <Icon size={18} />
-                    {!collapsed && <span>{item.label}</span>}
+                    <Icon size={16} className="shrink-0" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
                   </button>
                 );
               })}
             </div>
           </div>
         ))}
-      </div>
+      </nav>
 
-      <div className="absolute bottom-0 w-full p-3 border-t border-border bg-surface-container-lowest">
-        {state.companies.length > 0 && (
-          <div className="mb-3">
-            <label className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2">Company</label>
-            <select
-              value={state.company?.id || ''}
-              onChange={(e) => switchCompany(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-border rounded bg-surface-container-lowest text-white focus:outline-none focus:ring-2 focus:ring-green"
-            >
-              {state.companies.map((c) => (
-                <option key={c.id} value={c.id}>{c.legal_name}</option>
-              ))}
-            </select>
+      <div className="border-t border-white/10 p-3 shrink-0">
+        <button
+          onClick={() => navigate('/settings')}
+          className={`w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-[#c7d2e6] hover:bg-white/5 hover:text-white transition-colors ${
+            isActive('/settings') ? 'bg-secondary text-on-secondary font-semibold' : ''
+          }`}
+          title={collapsed ? 'Settings' : undefined}
+        >
+          <Settings size={16} className="shrink-0" />
+          {!collapsed && <span>Settings</span>}
+        </button>
+        <button
+          onClick={() => navigate('/support')}
+          className={`w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-[#c7d2e6] hover:bg-white/5 hover:text-white transition-colors ${
+            isActive('/support') ? 'bg-secondary text-on-secondary font-semibold' : ''
+          }`}
+          title={collapsed ? 'Help and support' : undefined}
+        >
+          <LifeBuoy size={16} className="shrink-0" />
+          {!collapsed && <span>Help and support</span>}
+        </button>
+
+        {!collapsed && (
+          <div className="mt-3 px-3 pt-3 border-t border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{userName}</p>
+                <p className="text-[11px] text-on-primary-container truncate">{roleName}</p>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="p-1.5 rounded text-on-primary-container hover:text-white hover:bg-white/10 transition-colors"
+                title="Sign out"
+                aria-label="Sign out"
+              >
+                <LogOut size={15} />
+              </button>
+            </div>
           </div>
         )}
-        <div className="px-2 py-3 bg-surface-container-lowest rounded-lg border border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full text-secondary-text flex items-center justify-center text-xs font-bold">
-              {state.user?.full_name?.[0] || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{state.user?.full_name || 'User'}</p>
-              <p className="text-xs text-secondary-text truncate">{state.user?.email}</p>
-            </div>
-            <button onClick={() => navigate('/login')} className="text-secondary-text hover:text-white text-xs">
-              Sign out
-            </button>
-          </div>
-        </div>
       </div>
     </aside>
   );
 };
-
-
-
-

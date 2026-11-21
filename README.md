@@ -6,7 +6,7 @@ AI-powered accounting, financial management, and auditing SaaS platform for Indi
 
 - **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS
 - **Backend:** Express + SQLite (better-sqlite3)
-- **Ports:** Backend `:5000`, Frontend `:3000` (proxies `/api` to `:5000`)
+- **Ports:** Backend `:5000`, Frontend preview `:5173` (proxies `/api` to `:5000`). Port `3000` must remain stopped.
 
 ## Project Root
 
@@ -20,15 +20,16 @@ Colors are taken from the Stitch design files and must not be redesigned:
 
 | Token | Value |
 |-------|-------|
-| Primary Navy | `#101B2D` |
-| Primary Green | `#16A36A` |
-| Background | `#F5F7FA` |
-| Surface | `#FFFFFF` |
-| Text Primary | `#172033` |
-| Text Secondary | `#64748B` |
-| Border | `#E8EDF3` |
+| Primary | `#000000` |
+| Secondary | `#006d44` |
+| Background | `#f9f9ff` |
+| Surface container low | `#f1f3ff` |
+| On surface | `#121b2e` |
+| On surface variant | `#45474c` |
+| Outline | `#75777d` |
+| Primary container | `#111c2e` |
 
-Typography: Inter (300, 400, 500, 600, 700). Currency: Indian Rupees (₹) with Indian digit grouping (lakhs/crores). Date format: DD/MM/YYYY.
+Typography: Inter + JetBrains Mono + lucide-react. Currency: Indian Rupees (₹) with Indian digit grouping (lakhs/crores). Date format: DD/MM/YYYY.
 
 ## Quick Start
 
@@ -69,13 +70,15 @@ npm run migrate
 cd /finzi-ai/server
 npm start
 
-# Terminal 2 — Frontend (port 3000)
+# Terminal 2 — Frontend preview (port 5173)
 cd /finzi-ai/client
-npm run dev
+npm run build
+npx vite preview --port 5173 --host
 ```
 
 - Backend API: `http://localhost:5000/api/health`
-- Frontend: `http://localhost:3000`
+- Frontend preview: `http://localhost:5173`
+- Port 3000 must remain stopped.
 
 ## What is built (included)
 
@@ -83,7 +86,14 @@ npm run dev
 - **Frontend:** React router app with auth pages, dashboard, bills/invoices/ledger/banking/tax/reports/audit/AI/reminders/settings, sidebar navigation, KPI cards, status badges, Indian currency/date formatting.
 - **DB:** SQLite schema (30+ tables) with migrations + default role/permission seeder.
 
-## What is pending integration (honestly marked)
+## Demo account
+
+- Email: `demo@finzi.ai`
+- Password: `Demo@2026!`
+- Workspace: Sharma & Associates LLP (GSTIN: 27AAEFS1234P1Z8, PAN: AAEFS1234P)
+- Role: Workspace Owner
+
+Seed data includes 25 chart-of-accounts, 31 journal entries, 12 bills, 12 invoices, 4 automation workflows, 30 activity log entries, and audit content (1 engagement, 3 working papers, 3 observations, 1 evidence item).
 
 Per the project constraints, no fake claims are made. Integration adapters are implemented but remain **inactive until you configure credentials** in `.env`. When inactive, they return a `pending` state and a helpful message instead of fabricating results.
 
@@ -122,6 +132,7 @@ Base URL: `http://localhost:5000/api`
 
 ### Companies
 - `GET /companies`, `GET /companies/:id`, `POST /companies`, `PUT /companies/:id`
+- `GET /companies` returns `role_name` (resolved via `roles` table) alongside `role_id`
 
 ### Users / Team
 - `GET /users`, `GET /roles`, `GET /roles/:id/permissions`, `GET /permissions`
@@ -199,6 +210,10 @@ Seed: default roles + permissions (Super Admin, Workspace Owner, Company Admin, 
 ## Authorization
 
 Middleware: `requireAuth`, `requireCompanyAccess`, `requirePermission`. All mutating routes check the relevant permission. Multi-tenant isolation: every query filters by `company_id`.
+
+### Audit tenant scoping
+
+All audit module GET lists (engagements, evidence, working papers, observations) are firm-scoped through `clients.firm_id`. Audit POST/PUT/GET-by-id reject access to engagements outside the user's organizations with `403` or `404`.
 
 ## License
 

@@ -12,9 +12,12 @@ export interface User {
 export interface Company {
   id: string;
   legal_name: string;
+  name?: string;
   trade_name?: string;
   gstin?: string;
   pan?: string;
+  role_id?: string;
+  role_name?: string;
 }
 
 export interface Membership {

@@ -3,11 +3,11 @@ import {
   authLogin, authRegister, authMe, authLogout, authVerifyOTP, authForgotPassword,
   authResetPassword, authSwitchCompany, getAuthToken, setAuthToken,
 } from '../services/api';
-import type { User, Company, AuthState } from '../types';
+import type { AuthState } from '../types';
 
 const AuthContext = createContext<{
   state: AuthState;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, remember?: boolean) => Promise<void>;
   register: (data: { email: string; password: string; full_name: string; phone?: string }) => Promise<void>;
   logout: () => Promise<void>;
   verifyOTP: (token: string, type: string) => Promise<void>;
@@ -16,6 +16,8 @@ const AuthContext = createContext<{
   switchCompany: (companyId: string) => Promise<void>;
   checkAuth: () => Promise<void>;
 } | null>(null);
+
+const REMEMBER_KEY = 'finzi_remember';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -39,8 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       const res = await authMe();
-      const { user, token: newToken, company, companies, requiresVerification } = res.data;
-      setAuthToken(newToken);
+      const { user, token: newToken, company, companies } = res.data;
+      setAuthToken(newToken, localStorage.getItem(REMEMBER_KEY) !== '0');
       setState({
         user,
         token: newToken,
@@ -55,10 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, remember = true) => {
     const res = await authLogin({ email, password });
     const { token, user, company, companies } = res.data;
-    setAuthToken(token);
+    localStorage.setItem(REMEMBER_KEY, remember ? '1' : '0');
+    setAuthToken(token, remember);
     setState({ user, token, company, companies, isAuthenticated: true, isLoading: false });
   };
 

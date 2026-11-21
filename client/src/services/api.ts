@@ -22,24 +22,27 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('finzi_token');
-      localStorage.removeItem('finzi_user');
+      sessionStorage.removeItem('finzi_token');
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
 
-export const setAuthToken = (token: string | null) => {
+export const setAuthToken = (token: string | null, persist = true) => {
+  localStorage.removeItem('finzi_token');
+  sessionStorage.removeItem('finzi_token');
   if (token) {
-    localStorage.setItem('finzi_token', token);
+    const store = persist ? localStorage : sessionStorage;
+    store.setItem('finzi_token', token);
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
   } else {
-    localStorage.removeItem('finzi_token');
     delete api.defaults.headers.common.Authorization;
   }
 };
 
-export const getAuthToken = () => localStorage.getItem('finzi_token');
+export const getAuthToken = () =>
+  localStorage.getItem('finzi_token') || sessionStorage.getItem('finzi_token');
 
 export default api;
 
@@ -62,6 +65,9 @@ export const authForgotPassword = (data: { email: string }) =>
 export const authResetPassword = (data: { token: string; password: string }) =>
   api.post('/auth/reset-password', data);
 
+export const authChangePassword = (data: { current_password: string; new_password: string }) =>
+  api.post('/auth/change-password', data);
+
 export const authVerifyOTP = (data: { token: string; type: string }) =>
   api.post('/auth/verify-otp', data);
 
@@ -75,12 +81,20 @@ export const companiesList = () => api.get('/companies');
 export const companiesGet = (id: string) => api.get(`/companies/${id}`);
 export const companiesCreate = (data: any) => api.post('/companies', data);
 export const companiesUpdate = (id: string, data: any) => api.put(`/companies/${id}`, data);
+export const companyMembers = (id: string) => api.get(`/companies/${id}/members`);
+export const companyMembersAdd = (id: string, data: any) => api.post(`/companies/${id}/members`, data);
+export const companyMembersUpdate = (id: string, userId: string, data: any) =>
+  api.put(`/companies/${id}/members/${userId}`, data);
+export const companyMembersRemove = (id: string, userId: string) =>
+  api.delete(`/companies/${id}/members/${userId}`);
 
 // ============================================================
 // USERS & ROLES
 // ============================================================
 export const usersList = () => api.get('/users');
 export const rolesList = () => api.get('/roles');
+export const rolePermissions = (id: string) => api.get(`/roles/${id}/permissions`);
+export const permissionsList = () => api.get('/permissions');
 
 // ============================================================
 // DASHBOARD
@@ -95,6 +109,7 @@ export const billsGet = (id: string) => api.get(`/bills/${id}`);
 export const billsCreate = (data: any) => api.post('/bills', data);
 export const billsUpdate = (id: string, data: any) => api.put(`/bills/${id}`, data);
 export const billsDelete = (id: string) => api.delete(`/bills/${id}`);
+export const billsDuplicate = (id: string) => api.post(`/bills/${id}/duplicate`);
 export const billsRecordPayment = (id: string, data: any) => api.post(`/bills/${id}/payment`, data);
 
 // ============================================================
@@ -113,6 +128,7 @@ export const invoicesList = (params?: any) => api.get('/invoices', { params });
 export const invoicesGet = (id: string) => api.get(`/invoices/${id}`);
 export const invoicesCreate = (data: any) => api.post('/invoices', data);
 export const invoicesUpdate = (id: string, data: any) => api.put(`/invoices/${id}`, data);
+export const invoiceRecordReceipt = (id: string, data: any) => api.post(`/invoices/${id}/receipt`, data);
 
 // ============================================================
 // CUSTOMERS
@@ -156,6 +172,8 @@ export const documentsUpload = (file: File, companyId: string) => {
     params: { company_id: companyId },
   });
 };
+export const documentsDelete = (id: string) => api.delete(`/documents/${id}`);
+export const documentsVerify = (id: string) => api.post(`/documents/${id}/verify`);
 export const documentsDownload = (id: string) => api.get(`/documents/${id}/download`, { responseType: 'blob' });
 export const documentExtractionsGet = (documentId: string) => api.get(`/document-extractions/${documentId}`);
 export const documentExtractionsUpdate = (documentId: string, data: any) =>
@@ -167,6 +185,7 @@ export const documentExtractionsUpdate = (documentId: string, data: any) =>
 export const taxDashboard = () => api.get('/tax/dashboard');
 export const taxGSTR3B = () => api.get('/tax/gstr3b');
 export const taxGSTR2BReconciliation = () => api.get('/tax/gstr2b-reconciliation');
+export const taxRecordsCreate = (data: any) => api.post('/tax/records', data);
 
 // ============================================================
 // REPORTS
@@ -196,9 +215,19 @@ export const auditEvidenceCreate = (data: any, file?: File) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+export const auditEvidenceUpdate = (id: string, data: any) => api.put(`/audit/evidence/${id}`, data);
 export const auditWorkingPapersList = (params?: any) => api.get('/audit/working-papers', { params });
 export const auditWorkingPapersCreate = (data: any) => api.post('/audit/working-papers', data);
+export const auditWorkingPapersUpdate = (id: string, data: any) => api.put(`/audit/working-papers/${id}`, data);
 export const auditObservationsList = (params?: any) => api.get('/audit/observations', { params });
+export const auditObservationsCreate = (data: any) => api.post('/audit/observations', data);
+export const auditObservationsUpdate = (id: string, data: any) => api.put(`/audit/observations/${id}`, data);
+
+// ============================================================
+// CLIENTS (CA practice)
+// ============================================================
+export const clientsList = () => api.get('/clients');
+export const clientsCreate = (data: any) => api.post('/clients', data);
 
 // ============================================================
 // FINZI AI
@@ -218,6 +247,15 @@ export const aiApprovalsDecision = (id: string, decision: 'approve' | 'reject' |
 // ============================================================
 export const remindersList = (params?: any) => api.get('/reminders', { params });
 export const remindersCreate = (data: any) => api.post('/reminders', data);
+export const remindersUpdate = (id: string, data: any) => api.put(`/reminders/${id}`, data);
+export const remindersDelete = (id: string) => api.delete(`/reminders/${id}`);
+
+// ============================================================
+// AUTOMATIONS
+// ============================================================
+export const automationsList = () => api.get('/automations');
+export const automationsCreate = (data: any) => api.post('/automations', data);
+export const automationsUpdate = (id: string, data: any) => api.put(`/automations/${id}`, data);
 
 // ============================================================
 // NOTIFICATIONS
@@ -234,3 +272,4 @@ export const activityLogsList = () => api.get('/activity-logs');
 // SETTINGS
 // ============================================================
 export const settingsGet = () => api.get('/settings');
+export const integrationsStatus = () => api.get('/integrations/status');
