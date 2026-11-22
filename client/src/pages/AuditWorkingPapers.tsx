@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   auditEngagementsList,
   auditWorkingPapersCreate,
   auditWorkingPapersList,
   auditWorkingPapersUpdate,
 } from '../services/api';
-import { StatusBadge } from '../components/ui/StatusBadge';
-import { formatDateIN } from '../utils/format';
+import { Button } from '../components/ui/Button';
+import { Input, Select, Textarea } from '../components/ui/Input';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Card } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
 import { Plus } from 'lucide-react';
 
 const APPROVAL_STATES = ['draft', 'submitted', 'reviewed', 'approved', 'rejected'];
@@ -14,7 +17,6 @@ const APPROVAL_STATES = ['draft', 'submitted', 'reviewed', 'approved', 'rejected
 export default function AuditWorkingPapers() {
   const [papers, setPapers] = useState<any[]>([]);
   const [engagements, setEngagements] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,7 +32,6 @@ export default function AuditWorkingPapers() {
   });
 
   const load = async () => {
-    setLoading(true);
     setError('');
     try {
       const [wp, eng] = await Promise.all([auditWorkingPapersList(), auditEngagementsList()]);
@@ -38,8 +39,6 @@ export default function AuditWorkingPapers() {
       setEngagements(eng.data?.audit_engagements || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Could not load working papers');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -47,8 +46,8 @@ export default function AuditWorkingPapers() {
     load();
   }, []);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setBusy(true);
     setError('');
     setMessage('');
@@ -84,155 +83,135 @@ export default function AuditWorkingPapers() {
   };
 
   return (
-    <div className="p-6 space-y-space-md">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
-        <div>
-          <h1 className="text-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">Working papers</h1>
-          <p className="text-body-md text-body-md text-on-surface-variant">
-            Objectives, procedures and conclusions, each moving through a review and approval trail.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="inline-flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-secondary text-on-secondary shadow-sm hover:bg-on-secondary-container transition-all font-label-md text-label-md font-semibold self-start"
-        >
-          <Plus size={14} /> New working paper
-        </button>
-      </div>
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title="Working papers"
+        description="Objectives, procedures and conclusions, each moving through a review and approval trail."
+        actions={
+          <Button variant="green" onClick={() => setShowForm((v) => !v)} disabled={busy} className="ml-auto">
+            <Plus size={16} className="text-on-secondary" /> New working paper
+          </Button>
+        }
+      />
 
-      {error && <p className="rounded bg-error-container/40 border border-error/40 px-space-md py-space-sm text-sm text-error">{error}</p>}
-      {message && <p className="rounded bg-secondary-container/40 border border-secondary/40 px-space-md py-space-sm text-sm text-on-secondary-container">{message}</p>}
+      {error && (
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="rounded-xl border border-line bg-brand-soft px-4 py-3 text-sm text-brand-ink flex items-center gap-2">
+          {message}
+        </div>
+      )}
 
       {showForm && (
-        <form onSubmit={submit} className="bg-surface-container-lowest border border-outline rounded-lg p-space-md grid grid-cols-1 md:grid-cols-2 gap-space-sm">
-          <label className="text-xs font-semibold text-on-surface-variant">
-            Engagement
-            <select
-              required
+        <Card flush className="space-y-1">
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">New working paper</h2>
+          </div>
+          <form onSubmit={submit} noValidate className="p-4 pb-2 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <Select
+              id="wp-engagement"
+              label="Engagement"
               value={form.engagement_id}
-              onChange={(e) => setForm({ ...form, engagement_id: e.target.value })}
-              className="select-field mt-1"
+              onChange={(e) => setForm((c) => ({ ...c, engagement_id: e.target.value }))}
+              required
+              hint="Select an engagement"
             >
               <option value="">Select an engagement</option>
               {engagements.map((eng) => (
                 <option key={eng.id} value={eng.id}>{eng.engagement_name}</option>
               ))}
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant">
-            Working paper number
-            <input
-              required
+            </Select>
+            <Input
+              id="wp-number"
+              label="Working paper number"
               value={form.wp_number}
-              onChange={(e) => setForm({ ...form, wp_number: e.target.value })}
-              className="input-field mt-1 font-code-mono text-code-mono"
-              placeholder="WP-01"
-            />
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant">
-            Audit area
-            <input
+              onChange={(e) => setForm((c) => ({ ...c, wp_number: e.target.value }))}
               required
+              hint="WP-01"
+            />
+            <Input
+              id="wp-audit-area"
+              label="Audit area"
               value={form.audit_area}
-              onChange={(e) => setForm({ ...form, audit_area: e.target.value })}
-              className="input-field mt-1"
+              onChange={(e) => setForm((c) => ({ ...c, audit_area: e.target.value }))}
+              required
               placeholder="Revenue recognition"
             />
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant">
-            Evidence references
-            <input
+            <Input
+              id="wp-evidence-refs"
+              label="Evidence references"
               value={form.evidence_references}
-              onChange={(e) => setForm({ ...form, evidence_references: e.target.value })}
-              className="input-field mt-1"
-              placeholder="EVD-101, EVD-104"
+              onChange={(e) => setForm((c) => ({ ...c, evidence_references: e.target.value }))}
+              hint="EVD-101, EVD-104"
             />
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant md:col-span-2">
-            Objective
-            <textarea
-              rows={2}
+            <Input
+              id="wp-objective"
+              label="Objective"
               value={form.objective}
-              onChange={(e) => setForm({ ...form, objective: e.target.value })}
-              className="input-field mt-1"
+              onChange={(e) => setForm((c) => ({ ...c, objective: e.target.value }))}
             />
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant md:col-span-2">
-            Procedure
-            <textarea
-              rows={3}
-              value={form.procedure}
-              onChange={(e) => setForm({ ...form, procedure: e.target.value })}
-              className="input-field mt-1"
-            />
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant md:col-span-2">
-            Conclusion
-            <textarea
-              rows={2}
-              value={form.auditor_conclusion}
-              onChange={(e) => setForm({ ...form, auditor_conclusion: e.target.value })}
-              className="input-field mt-1"
-            />
-          </label>
-          <div className="md:col-span-2 flex items-center gap-space-sm">
-            <button
-              type="submit"
-              disabled={busy}
-              className="px-space-md py-space-xs rounded bg-secondary text-on-secondary text-label-md font-semibold disabled:opacity-60"
-            >
-              {busy ? 'Saving' : 'Create working paper'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="px-space-md py-space-xs rounded border border-outline text-label-md font-semibold text-on-surface"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+            <Textarea id="wp-procedure" label="Procedure" rows={3} value={form.procedure} onChange={(e) => setForm((c) => ({ ...c, procedure: e.target.value }))} />
+            <Textarea id="wp-conclusion" label="Auditor conclusion" rows={3} value={form.auditor_conclusion} onChange={(e) => setForm((c) => ({ ...c, auditor_conclusion: e.target.value }))} />
+            <div className="md:col-span-3 flex flex-col-reverse gap-2 border-t border-line px-4 py-3 sm:flex-row sm:items-end sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-line px-3 text-[12px] font-medium text-primary-text transition-colors duration-micro hover:bg-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              >
+                Cancel
+              </button>
+              <Button type="submit" disabled={busy} loading={busy} className="ml-auto">
+                Create working paper
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
 
-      <div className="space-y-space-sm">
-        {loading ? (
-          <p className="text-sm text-on-surface-variant text-center py-space-lg">Loading working papers...</p>
-        ) : papers.length === 0 ? (
-          <p className="bg-surface-container-lowest border border-outline rounded-lg px-space-md py-space-lg text-sm text-on-surface-variant text-center">
-            No working paper yet.
-          </p>
-        ) : (
-          papers.map((paper) => (
-            <article key={paper.id} className="bg-surface-container-lowest border border-outline rounded-lg p-space-md">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-sm">
-                <div className="min-w-0">
-                  <p className="font-code-mono text-code-mono text-on-surface-variant">{paper.wp_number}</p>
-                  <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">{paper.audit_area}</h2>
-                  {paper.objective && <p className="text-sm text-on-surface-variant mt-space-2xs">{paper.objective}</p>}
-                  {paper.auditor_conclusion && (
-                    <p className="text-sm text-on-surface mt-space-2xs">Conclusion: {paper.auditor_conclusion}</p>
-                  )}
-                  {paper.prepared_at && (
-                    <p className="text-xs text-on-surface-variant mt-space-2xs">Prepared {formatDateIN(paper.prepared_at)}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-space-sm shrink-0">
-                  <StatusBadge status={paper.approval_status || 'draft'} />
-                  <select
-                    value={paper.approval_status || 'draft'}
-                    onChange={(e) => setApproval(paper.id, e.target.value)}
-                    className="select-field py-1 text-xs"
-                  >
-                    {APPROVAL_STATES.map((state) => (
-                      <option key={state} value={state}>{state}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </article>
-          ))
-        )}
-      </div>
+      <Card flush>
+        <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+          <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Working papers register</h2>
+        </div>
+        <div className="overflow-x-auto p-4">
+          <DataTable
+            columns={[
+              {
+                key: 'wp',
+                label: 'WORKING PAPER',
+                render: (row) => (
+                  <span className="block min-w-0">
+                    <span className="block truncate text-[11px] font-medium leading-4 text-primary-text">{row.wp_number}</span>
+                    <span className="mt-0.5 block text-[10px] leading-3 text-ink-3">{row.audit_area}</span>
+                  </span>
+                ),
+              },
+              { key: 'engagement', label: 'ENGAGEMENT', render: (row) => <span className="text-[11px] leading-4 text-ink-3">{row.engagement_name}</span> },
+              { key: 'procedure', label: 'PROCEDURE', render: (row) => <span className="text-[10px] leading-4 text-ink-3">{row.procedure || '—'}</span> },
+              { key: 'status', label: 'APPROVAL', align: 'right', render: (row) => (
+                <Select
+                  value={row.approval_status || 'draft'}
+                  onChange={(e) => setApproval(row.id, e.target.value)}
+                  className="text-[10px]"
+                >
+                  {APPROVAL_STATES.map((state) => (
+                    <option key={state} value={state}>{state.replace(/_/g, ' ')}</option>
+                  ))}
+                </Select>
+              )},
+              {
+                key: 'conclusion',
+                label: 'CONCLUSION',
+                render: (row) => <span className="text-[10px] leading-4 text-ink-3">{row.auditor_conclusion || '—'}</span>,
+              },
+            ]}
+            rows={(papers || []) as any[]}
+            emptyMessage="No working papers yet."
+          />
+        </div>
+      </Card>
     </div>
   );
 }

@@ -1,11 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { remindersList, remindersCreate, remindersUpdate, remindersDelete } from '../services/api';
+import { Plus } from 'lucide-react';
+import { remindersCreate, remindersDelete, remindersList, remindersUpdate } from '../services/api';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { Input, Select, Textarea } from '../components/ui/Input';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { PageHeader } from '../components/layout/PageHeader';
+import { StatCard } from '../components/ui/StatCard';
+import { DataTable } from '../components/ui/DataTable';
+import { Card } from '../components/ui/Card';
 import { formatDateIN } from '../utils/format';
-import { Check, Plus, Search, Trash2 } from 'lucide-react';
 
 const emptyReminder = {
   title: '',
@@ -17,33 +20,28 @@ const emptyReminder = {
 
 export default function Reminders() {
   const [reminders, setReminders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
-  const [search, setSearch] = useState('');
   const [draft, setDraft] = useState(emptyReminder);
   const [creating, setCreating] = useState(false);
   const [actionId, setActionId] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
-    setLoading(true);
     setError('');
     try {
       const res = await remindersList();
       setReminders(res.data.reminders || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Could not load reminders');
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleCreate = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setCreating(true);
     setActionError('');
     try {
@@ -90,190 +88,120 @@ export default function Reminders() {
     }
   };
 
-  const normalizedSearch = search.trim().toLowerCase();
-  const filteredReminders = reminders.filter((reminder) =>
-    [reminder.title, reminder.category, reminder.description].some((value) =>
-      String(value || '').toLowerCase().includes(normalizedSearch)
-    )
-  );
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
-        <div>
-          <h1 className="text-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">Reminders & Automation</h1>
-          <p className="text-body-md text-body-md text-on-surface-variant">Set up automated reminders for compliance and follow-ups.</p>
-        </div>
-        <Button type="submit" form="reminder-form" variant="green" disabled={creating}>
-          <Plus size={16} className="text-on-secondary" /> {creating ? 'Creating...' : 'New Reminder'}
-        </Button>
-      </div>
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title="Reminders"
+        description="Set up automated reminders for compliance and follow-ups."
+        actions={
+          <Button variant="green" onClick={() => {}} disabled={creating} className="ml-auto">
+            <Plus size={16} className="text-on-secondary" /> New reminder
+          </Button>
+        }
+      />
 
-      <Card className="mt-space-md">
-        <CardHeader>
-          <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Create Reminder</h2>
-        </CardHeader>
-        <CardContent>
-          <form id="reminder-form" onSubmit={handleCreate}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-space-md">
-              <Input
-                label="Title"
-                required
-                value={draft.title}
-                onChange={(e) => setDraft((current) => ({ ...current, title: e.target.value }))}
-              />
-              <Input
-                label="Category"
-                required
-                value={draft.category}
-                onChange={(e) => setDraft((current) => ({ ...current, category: e.target.value }))}
-              />
-              <Input
-                label="Due Date"
-                type="date"
-                required
-                value={draft.due_date}
-                onChange={(e) => setDraft((current) => ({ ...current, due_date: e.target.value }))}
-              />
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-primary-text" htmlFor="reminder-priority">Priority</label>
-                <select
-                  id="reminder-priority"
-                  value={draft.priority}
-                  onChange={(e) => setDraft((current) => ({ ...current, priority: e.target.value }))}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface text-primary-text focus:outline-none focus:ring-2 focus:ring-green"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-            </div>
-            <div className="mt-space-md">
-              <Input
-                label="Description"
-                value={draft.description}
-                onChange={(e) => setDraft((current) => ({ ...current, description: e.target.value }))}
-              />
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-xl mt-space-md">
-        <Card className="p-4">
-          <div className="text-xs font-semibold text-on-surface-variant">Total Reminders</div>
-          <div className="text-2xl font-bold text-on-surface tnum">{reminders.length}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs font-semibold text-on-surface-variant">Due Today</div>
-          <div className="text-2xl font-bold text-warning tnum">
-            {reminders.filter(r => r.status === 'pending' && String(r.due_date || '').slice(0, 10) === todayKey).length}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs font-semibold text-on-surface-variant">Overdue</div>
-          <div className="text-2xl font-bold text-error tnum">{reminders.filter(r => r.status === 'overdue').length}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs font-semibold text-secondary">Completed</div>
-          <div className="text-2xl font-bold text-secondary tnum">
-            {reminders.filter(r => r.status === 'completed').length}
-          </div>
-        </Card>
-      </div>
-
-      <div className="relative max-w-md mb-space-md">
-        <Input
-          icon={<Search size={16} className="text-on-surface-variant" />}
-          placeholder="Search reminders..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      {actionError && (
-        <div className="mb-space-md p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm">
-          {actionError}
-        </div>
-      )}
       {error && (
-        <div className="mb-space-md p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm">
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
           {error}
         </div>
       )}
+      {actionError && (
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
+          {actionError}
+        </div>
+      )}
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Scheduled Reminders</h2>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-surface-container-low border-b border-outline">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-on-surface-variant">Title</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-on-surface-variant">Category</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-on-surface-variant">Due Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-on-surface-variant">Priority</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-on-surface-variant">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-on-surface-variant">Assigned</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-on-surface-variant">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-on-surface-variant">Loading...</td></tr>
-                ) : filteredReminders.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-on-surface-variant">No reminders found</td>
-                  </tr>
-                ) : (
-                  filteredReminders.map((reminder) => (
-                    <tr key={reminder.id} className="border-b border-outline hover:bg-surface-container-low">
-                      <td className="px-4 py-3 text-on-surface">{reminder.title}</td>
-                      <td className="px-4 py-3 text-xs text-on-surface-variant capitalize">{reminder.category}</td>
-                      <td className="px-4 py-3 text-xs text-on-surface-variant">{formatDateIN(reminder.due_date || '') || '—'}</td>
-                      <td className="px-4 py-3 text-xs text-on-surface-variant capitalize">{reminder.priority}</td>
-                      <td className="px-4 py-3 text-center">
-                        <StatusBadge status={reminder.status} />
-                      </td>
-                      <td className="px-4 py-3 text-right text-xs text-on-surface-variant">
-                        {reminder.assigned_name || reminder.assigned_to || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {reminder.status !== 'completed' ? (
-                            <button
-                              onClick={() => markDone(reminder.id)}
-                              disabled={actionId === reminder.id}
-                              className="inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-primary disabled:opacity-50"
-                              title="Mark done"
-                            >
-                              <Check size={14} /> Done
-                            </button>
-                          ) : (
-                            <span className="text-xs text-on-surface-variant">Completed</span>
-                          )}
-                          <button
-                            onClick={() => deleteReminder(reminder.id, reminder.title)}
-                            disabled={actionId === reminder.id}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-error hover:text-danger disabled:opacity-50"
-                            title="Delete reminder"
-                          >
-                            <Trash2 size={14} /> Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Total Reminders" metrics={[{ label: 'Count', value: String(reminders.length) }]} />
+        <StatCard title="Due Today" readout={{ value: String(reminders.filter((r) => r.status === 'pending' && String(r.due_date || '').slice(0, 10) === todayKey).length) }} metrics={[{ label: 'Today', value: String(reminders.filter((r) => r.status === 'pending' && String(r.due_date || '').slice(0, 10) === todayKey).length) }]} />
+        <StatCard title="Overdue" readout={{ value: String(reminders.filter((r) => r.status === 'overdue').length), tone: 'negative' }} metrics={[{ label: 'Overdue', value: String(reminders.filter((r) => r.status === 'overdue').length) }]} />
+        <StatCard title="Completed" readout={{ value: String(reminders.filter((r) => r.status === 'completed').length), tone: 'positive' }} metrics={[{ label: 'Completed', value: String(reminders.filter((r) => r.status === 'completed').length) }]} />
+      </div>
+
+      <Card flush className="space-y-1">
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Create Reminder</h2>
           </div>
-        </CardContent>
+          <form onSubmit={handleCreate} noValidate className="p-4 pb-2 grid grid-cols-1 gap-3 md:grid-cols-4">
+            <Input
+              id="reminder-title"
+              label="Title"
+              value={draft.title}
+              onChange={(e) => setDraft((current) => ({ ...current, title: e.target.value }))}
+              required
+              placeholder="File GSTR-3B for Himalaya Foods"
+            />
+            <Input
+              id="reminder-category"
+              label="Category"
+              value={draft.category}
+              onChange={(e) => setDraft((current) => ({ ...current, category: e.target.value }))}
+              required
+            />
+            <Input id="reminder-due-date" label="Due Date" type="date" value={draft.due_date} onChange={(e) => setDraft((current) => ({ ...current, due_date: e.target.value }))} required />
+            <Select
+              id="reminder-priority"
+              label="Priority"
+              value={draft.priority}
+              onChange={(e) => setDraft((current) => ({ ...current, priority: e.target.value }))}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </Select>
+            <Textarea id="reminder-description" label="Description" rows={3} value={draft.description} onChange={(e) => setDraft((current) => ({ ...current, description: e.target.value }))} />
+            <div className="md:col-span-4 flex flex-col-reverse gap-2 border-t border-line px-4 py-3 sm:flex-row sm:items-end sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setDraft(emptyReminder)}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-line px-3 text-[12px] font-medium text-primary-text transition-colors duration-micro hover:bg-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              >
+                Clear
+              </button>
+              <Button type="submit" disabled={creating} loading={creating} className="ml-auto">
+                Create reminder
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+      <Card flush>
+        <div className="overflow-x-auto p-4">
+          <DataTable
+            columns={[
+              { key: 'title', label: 'TITLE', render: (row) => <span className="text-[11px] font-medium leading-4 text-primary-text">{row.title}</span> },
+              { key: 'category', label: 'CATEGORY', render: (row) => <span className="text-[10px] leading-4 text-ink-3 capitalize">{row.category}</span> },
+              { key: 'due', label: 'DUE DATE', align: 'right', render: (row) => <span className="block text-right text-[11px] leading-4 text-ink-3 tnum">{formatDateIN(row.due_date || '') || '—'}</span> },
+              { key: 'priority', label: 'PRIORITY', align: 'right', render: (row) => <StatusBadge status={row.priority} /> },
+              { key: 'status', label: 'STATUS', align: 'right', render: (row) => <StatusBadge status={row.status} /> },
+              { key: 'assigned', label: 'ASSIGNED', render: (row) => <span className="text-[11px] leading-4 text-ink-3 tnum">{row.assigned_name || row.assigned_to || '—'}</span> },
+              {
+                key: 'actions',
+                label: '',
+                align: 'right',
+                render: (row) => (
+                  <div className="flex items-center gap-2">
+                    {row.status !== 'completed' ? (
+                      <Button type="button" size="sm" variant="outline" disabled={actionId === row.id} onClick={() => markDone(row.id)} className="w-auto">
+                        Done
+                      </Button>
+                    ) : (
+                      <span className="text-[10px] text-ink-3">Completed</span>
+                    )}
+                    <Button type="button" size="sm" variant="danger" disabled={actionId === row.id} onClick={() => deleteReminder(row.id, row.title)} className="w-auto">
+                      Delete
+                    </Button>
+                  </div>
+                ),
+              },
+            ]}
+            rows={(reminders || []) as any[]}
+            emptyMessage="No reminders found"
+          />
+        </div>
       </Card>
     </div>
   );

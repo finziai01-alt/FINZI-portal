@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Check, KeyRound, RefreshCw, ShieldCheck } from 'lucide-react';
 import { rolePermissions, rolesList } from '../services/api';
-import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { StatusBadge } from '../components/ui/StatusBadge';
+import { PageHeader } from '../components/layout/PageHeader';
+import { DataTable } from '../components/ui/DataTable';
+import { Card } from '../components/ui/Card';
+import { cn } from '../utils/cn';
 
 interface Role {
   id: string;
@@ -39,7 +43,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
 function getPermissionName(permission: PermissionEntry): string {
   if (typeof permission === 'string') return permission;
   if (permission.name) return permission.name;
-
   const resourceAction = [permission.resource, permission.action].filter(Boolean).join(' · ');
   return resourceAction || permission.id || 'Unnamed permission';
 }
@@ -65,7 +68,6 @@ export default function Roles() {
     setPermissionsLoading(true);
     setPermissionsError(null);
     setPermissions([]);
-
     try {
       const response = await rolePermissions(roleId);
       const payload = response.data as RolePermissionsPayload;
@@ -91,13 +93,11 @@ export default function Roles() {
   const loadRoles = async () => {
     setLoading(true);
     setLoadError(null);
-
     try {
       const response = await rolesList();
       const payload = response.data as RolesPayload;
       const loadedRoles = Array.isArray(payload.roles) ? payload.roles : [];
       setRoles(loadedRoles);
-
       const firstRole = loadedRoles[0];
       if (firstRole) {
         setSelectedRoleId(firstRole.id);
@@ -125,167 +125,162 @@ export default function Roles() {
   };
 
   return (
-    <div className="p-6 space-y-space-lg">
-      <header>
-        <h1 className="font-headline-lg text-headline-lg font-bold tracking-tight text-on-surface">
-          Roles and permissions
-        </h1>
-        <p className="mt-1 text-body-md text-on-surface-variant">
-          Review role definitions and the permissions assigned to each role.
-        </p>
-      </header>
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title="Roles and permissions"
+        description="Review role definitions and the permissions assigned to each role."
+        actions={
+          <Button variant="outline" onClick={() => void loadRoles()}>
+            <RefreshCw size={16} /> Refresh
+          </Button>
+        }
+      />
 
       {loadError && (
-        <div
-          role="alert"
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-space-sm rounded-md bg-error-container/40 px-space-md py-space-sm text-body-sm text-error"
-        >
-          <span className="flex items-start gap-space-sm">
-            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-            {loadError}
-          </span>
-          <Button type="button" variant="outline" size="sm" onClick={() => void loadRoles()}>
-            <RefreshCw size={14} />
-            Retry
-          </Button>
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
+          <AlertTriangle size={16} className="shrink-0" />
+          <span>{loadError}</span>
         </div>
       )}
 
-      {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-lg" aria-live="polite">
-          <span className="sr-only">Loading roles and permissions</span>
-          <div className="h-80 animate-pulse rounded-lg bg-surface-container-low" />
-          <div className="h-80 animate-pulse rounded-lg bg-surface-container-low" />
-        </div>
-      ) : roles.length === 0 ? (
-        <section className="card px-4 py-12 text-center">
-          <KeyRound size={30} className="mx-auto mb-space-sm text-on-surface-variant opacity-50" />
-          <h2 className="text-body-md font-medium text-on-surface">No roles found</h2>
-          <p className="mt-1 text-body-sm text-on-surface-variant">
-            Roles returned by the workspace will appear here.
-          </p>
-        </section>
+      {loading || roles.length === 0 ? (
+        <Card flush className="text-center py-16">
+          {loading ? (
+            <>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-sub text-ink-3">
+                <KeyRound size={20} />
+              </div>
+              <h2 className="mt-4 text-[12.5px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Loading roles</h2>
+            </>
+          ) : (
+            <>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-sub text-ink-3">
+                <KeyRound size={20} />
+              </div>
+              <h2 className="mt-4 text-[12.5px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">No roles found</h2>
+              <p className="mt-1 max-w-[45ch] mx-auto text-[11.5px] leading-4 text-ink-3">
+                Roles returned by the workspace will appear here.
+              </p>
+            </>
+          )}
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-lg items-start">
-          <section className="card overflow-hidden">
-            <div className="flex items-center gap-space-sm border-b border-outline px-space-md py-space-md">
-              <KeyRound size={18} className="text-secondary" />
-              <div>
-                <h2 className="font-headline-sm text-headline-sm font-bold text-on-surface">Roles</h2>
-                <p className="text-body-sm text-on-surface-variant">Select a role to inspect its access.</p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-4">
+            <Card flush>
+              <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+                <div>
+                  <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Roles</h2>
+                  <p className="mt-0.5 text-[10.5px] leading-4 text-ink-3">Select a role to inspect its access.</p>
+                </div>
               </div>
-            </div>
-
-            <div className="divide-y divide-outline">
-              {roles.map((role) => {
-                const isSelected = role.id === selectedRoleId;
-                return (
-                  <button
-                    key={role.id}
-                    type="button"
-                    onClick={() => selectRole(role.id)}
-                    className={`w-full px-space-md py-space-md text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary ${
-                      isSelected
-                        ? 'bg-secondary-container/30'
-                        : 'bg-surface-container-lowest hover:bg-surface-container-low'
-                    }`}
-                    aria-pressed={isSelected}
-                  >
-                    <div className="flex items-start justify-between gap-space-sm">
-                      <div className="min-w-0">
-                        <p className="font-medium text-on-surface">{role.name}</p>
-                        <p className="mt-1 text-body-sm text-on-surface-variant">
-                          {role.description || 'No description provided.'}
-                        </p>
-                      </div>
-                      <Badge variant={role.is_system ? 'info' : 'default'} className="shrink-0">
-                        {role.is_system ? 'System role' : 'Custom role'}
-                      </Badge>
-                    </div>
-                    <p className="mt-space-sm text-label-sm text-on-surface-variant">
-                      Level {role.level ?? '—'}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="card overflow-hidden">
-            <div className="flex items-center gap-space-sm border-b border-outline px-space-md py-space-md">
-              <ShieldCheck size={18} className="text-secondary" />
-              <div>
-                <h2 className="font-headline-sm text-headline-sm font-bold text-on-surface">
-                  {selectedRole ? `${selectedRole.name} permissions` : 'Permissions'}
-                </h2>
-                <p className="text-body-sm text-on-surface-variant">
-                  {selectedRole
-                    ? `Permissions granted to ${selectedRole.name}.`
-                    : 'Select a role to view its permissions.'}
-                </p>
+              <div className="overflow-x-auto p-4">
+                <DataTable
+                  columns={[
+                    {
+                      key: 'name',
+                      label: 'ROLE',
+                      render: (row) => (
+                        <span className="block min-w-0">
+                          <span className="block truncate text-[11.5px] font-medium leading-4 text-primary-text">{row.name}</span>
+                          <span className="mt-0.5 block truncate text-[10px] leading-3 text-ink-3">{row.description || 'No description provided.'}</span>
+                        </span>
+                      ),
+                    },
+                    { key: 'level', label: 'LEVEL', align: 'right', render: (row) => <span className="block text-right text-[11.5px] leading-4 text-ink-3 tnum">{row.level ?? '—'}</span> },
+                    {
+                      key: 'type',
+                      label: 'TYPE',
+                      align: 'right',
+                      render: (row) => (
+                        <StatusBadge status={row.is_system ? 'system_role' : 'custom_role'} />
+                      ),
+                    },
+                    {
+                      key: 'action',
+                      label: '',
+                      align: 'right',
+                      render: (row) => (
+                        <button
+                          type="button"
+                          onClick={() => selectRole(row.id)}
+                          aria-pressed={row.id === selectedRoleId}
+                          title={`View ${row.name} permissions`}
+                          className={cn(
+                            'p-1.5 rounded-lg',
+                            row.id === selectedRoleId ? 'bg-sub text-primary-text' : 'text-on-surface-variant hover:bg-sub hover:text-primary-text',
+                            'transition-colors duration-micro'
+                          )}
+                        >
+                          <ShieldCheck size={14} />
+                        </button>
+                      ),
+                    },
+                  ]}
+                  rows={roles}
+                  emptyMessage="No roles found"
+                />
               </div>
-            </div>
+            </Card>
+          </div>
 
-            {permissionsLoading ? (
-              <div className="space-y-space-sm p-space-md" aria-live="polite">
-                <span className="sr-only">Loading permissions</span>
-                {[0, 1, 2, 3].map((row) => (
-                  <div key={row} className="h-10 animate-pulse rounded-md bg-surface-container-low" />
-                ))}
+          <div className="lg:col-span-8">
+            <Card flush>
+              <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+                <div>
+                  <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">
+                    {selectedRole ? `${selectedRole.name} permissions` : 'Permissions'}
+                  </h2>
+                  <p className="mt-0.5 text-[10.5px] leading-4 text-ink-3">
+                    {selectedRole ? `Permissions granted to ${selectedRole.name}.` : 'Select a role to view its permissions.'}
+                  </p>
+                </div>
               </div>
-            ) : permissionsError ? (
-              <div className="p-space-md">
-                <div
-                  role="alert"
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-space-sm rounded-md bg-error-container/40 px-space-md py-space-sm text-body-sm text-error"
-                >
-                  <span className="flex items-start gap-space-sm">
-                    <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                    {permissionsError}
-                  </span>
+
+              {permissionsLoading ? (
+                <div className="space-y-3 p-4" aria-live="polite">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="h-10 shimmer rounded-lg border border-line" />
+                  ))}
+                </div>
+              ) : permissionsError ? (
+                <div className="rounded-xl border border-line bg-neg-soft p-4 text-sm text-danger-ink flex items-center gap-2">
+                  <AlertTriangle size={16} className="shrink-0" />
+                  <span>{permissionsError}</span>
                   {selectedRoleId && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void loadPermissions(selectedRoleId)}
-                    >
-                      <RefreshCw size={14} />
-                      Retry
+                    <Button variant="outline" onClick={() => void loadPermissions(selectedRoleId)} className="ml-auto">
+                      <RefreshCw size={16} /> Retry
                     </Button>
                   )}
                 </div>
-              </div>
-            ) : permissions.length === 0 ? (
-              <div className="px-4 py-12 text-center">
-                <KeyRound size={28} className="mx-auto mb-space-sm text-on-surface-variant opacity-50" />
-                <p className="text-body-md font-medium text-on-surface">No permissions returned</p>
-              </div>
-            ) : (
-              <ul className="divide-y divide-outline">
-                {permissions.map((permission, index) => {
-                  const context = getPermissionContext(permission);
-                  const key = typeof permission === 'string' ? permission : permission.id || permission.name || index;
-
-                  return (
-                    <li key={key} className="flex items-start gap-space-sm px-space-md py-space-sm">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary-container/40 text-secondary">
-                        <Check size={13} strokeWidth={2.5} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-body-sm font-medium text-on-surface">
-                          {getPermissionName(permission)}
-                        </p>
-                        {context && (
-                          <p className="mt-0.5 text-label-sm text-on-surface-variant">{context}</p>
-                        )}
+              ) : permissions.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-sub text-ink-3">
+                    <KeyRound size={20} />
+                  </div>
+                  <p className="mt-4 text-[11.5px] leading-4 text-ink-3">No permissions returned</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-line p-4">
+                  {permissions.map((permission, index) => {
+                    const context = getPermissionContext(permission);
+                    const key = typeof permission === 'string' ? permission : permission.id || permission.name || String(index);
+                    return (
+                      <div key={key} className="flex items-start gap-3 px-3 py-2.5">
+                        <span className="mt-1 shrink-0 size-4 rounded-full bg-brand-soft flex items-center justify-center text-[10px] font-bold text-brand-ink">
+                          <Check size={12} strokeWidth={2} stroke="currentColor" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[11.5px] font-medium leading-4 text-primary-text">{getPermissionName(permission)}</p>
+                          {context && <p className="mt-0.5 text-[10px] leading-3 text-ink-3">{context}</p>}
+                        </div>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          </div>
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   bankAccountsCreate,
   bankAccountsList,
@@ -8,9 +8,15 @@ import {
   billsList,
   invoicesList,
 } from '../services/api';
-import { StatusBadge } from '../components/ui/StatusBadge';
 import { formatMoneyIN, formatDateIN } from '../utils/format';
 import { ArrowRight, Plus, Search, Upload } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Input, Select, Textarea } from '../components/ui/Input';
+import { StatusBadge } from '../components/ui/StatusBadge';
+import { PageHeader } from '../components/layout/PageHeader';
+import { StatCard } from '../components/ui/StatCard';
+import { DataTable, RowValue } from '../components/ui/DataTable';
+import { Card } from '../components/ui/Card';
 
 type CsvRow = { transaction_date: string; value_date: string; description: string; reference: string; debit: string; credit: string };
 
@@ -40,7 +46,6 @@ export default function Banking() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [bills, setBills] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
@@ -62,7 +67,6 @@ export default function Banking() {
   const [statementText, setStatementText] = useState('');
 
   const loadData = async () => {
-    setLoading(true);
     setError('');
     try {
       const [accRes, txRes, billRes, invRes] = await Promise.all([
@@ -77,8 +81,6 @@ export default function Banking() {
       setInvoices(invRes.data?.invoices || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Could not load banking data');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -93,8 +95,8 @@ export default function Banking() {
       .some((value: string) => String(value || '').toLowerCase().includes(term));
   });
 
-  const addAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const addAccount = async (event: React.FormEvent) => {
+    event.preventDefault();
     setBusy(true);
     setError('');
     setMessage('');
@@ -111,8 +113,8 @@ export default function Banking() {
     }
   };
 
-  const importStatement = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const importStatement = async (event: React.FormEvent) => {
+    event.preventDefault();
     setBusy(true);
     setError('');
     setMessage('');
@@ -140,15 +142,15 @@ export default function Banking() {
     }
   };
 
-  const submitMatch = async (txId: string) => {
+  const submitMatch = async () => {
     setError('');
     setMessage('');
-    if (!matchRecordId) {
+    if (!matchRecordId || !matchId) {
       setError('Pick the record this transaction settles');
       return;
     }
     try {
-      await bankTransactionMatch(txId, { matched_record_type: matchType, matched_record_id: matchRecordId });
+      await bankTransactionMatch(matchId, { matched_record_type: matchType, matched_record_id: matchRecordId });
       setMessage('Transaction matched.');
       setMatchId(null);
       setMatchRecordId('');
@@ -163,224 +165,265 @@ export default function Banking() {
   const reconciled = transactions.filter((t) => t.match_status === 'matched' || t.match_status === 'reconciled').length;
 
   return (
-    <div className="p-6 space-y-space-md">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
-        <div>
-          <h1 className="text-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">Banking</h1>
-          <p className="text-body-md text-body-md text-on-surface-variant">
-            Bank accounts, imported statement lines and reconciliation against bills and invoices.
-          </p>
-        </div>
-        <div className="flex items-center gap-space-sm">
-          <button
-            onClick={() => setShowImportForm((v) => !v)}
-            className="inline-flex items-center gap-space-xs px-space-md py-space-xs rounded-lg border border-outline text-label-md text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors"
-          >
-            <Upload size={14} /> Import statement
-          </button>
-          <button
-            onClick={() => setShowAccountForm((v) => !v)}
-            className="inline-flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-secondary text-on-secondary shadow-sm hover:bg-on-secondary-container transition-all font-label-md text-label-md font-semibold"
-          >
-            <Plus size={14} /> Add account
-          </button>
-        </div>
-      </div>
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title="Banking"
+        description="Bank accounts, imported statement lines and reconciliation against bills and invoices."
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setShowImportForm((v) => !v)} disabled={busy}>
+              <Upload size={16} /> Import statement
+            </Button>
+            <Button variant="green" onClick={() => setShowAccountForm((v) => !v)} disabled={busy} className="ml-auto">
+              <Plus size={16} className="text-on-secondary" /> Add account
+            </Button>
+          </>
+        }
+      />
 
-      {error && <p className="rounded bg-error-container/40 border border-error/40 px-space-md py-space-sm text-sm text-error">{error}</p>}
-      {message && <p className="rounded bg-secondary-container/40 border border-secondary/40 px-space-md py-space-sm text-sm text-on-secondary-container">{message}</p>}
+      {error && (
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="rounded-xl border border-line bg-brand-soft px-4 py-3 text-sm text-brand-ink flex items-center gap-2">
+          {message}
+        </div>
+      )}
 
       {showAccountForm && (
-        <form onSubmit={addAccount} className="bg-surface-container-lowest border border-outline rounded-lg p-space-md grid grid-cols-1 md:grid-cols-3 gap-space-sm">
-          <label className="text-xs font-semibold text-on-surface-variant">
-            Bank name
-            <input required value={accountForm.bank_name} onChange={(e) => setAccountForm({ ...accountForm, bank_name: e.target.value })} className="input-field mt-1" placeholder="HDFC Bank" />
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant">
-            Account nickname
-            <input value={accountForm.account_nickname} onChange={(e) => setAccountForm({ ...accountForm, account_nickname: e.target.value })} className="input-field mt-1" placeholder="Main current account" />
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant">
-            Masked account number
-            <input required value={accountForm.account_number_masked} onChange={(e) => setAccountForm({ ...accountForm, account_number_masked: e.target.value })} className="input-field mt-1 font-code-mono text-code-mono" placeholder="XXXX XXXX 4321" />
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant">
-            Account type
-            <select value={accountForm.account_type} onChange={(e) => setAccountForm({ ...accountForm, account_type: e.target.value })} className="select-field mt-1">
+        <Card flush className="space-y-1">
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Add bank account</h2>
+          </div>
+          <form onSubmit={addAccount} noValidate className="p-4 pb-2 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <Input
+              id="bank-name"
+              label="Bank name"
+              value={accountForm.bank_name}
+              onChange={(e) => setAccountForm((c) => ({ ...c, bank_name: e.target.value }))}
+              required
+              placeholder="HDFC Bank"
+            />
+            <Input
+              id="account-nickname"
+              label="Account nickname"
+              value={accountForm.account_nickname}
+              onChange={(e) => setAccountForm((c) => ({ ...c, account_nickname: e.target.value }))}
+              placeholder="Main current account"
+            />
+            <Input
+              id="account-number-masked"
+              label="Masked account number"
+              value={accountForm.account_number_masked}
+              onChange={(e) => setAccountForm((c) => ({ ...c, account_number_masked: e.target.value }))}
+              required
+              hint="XXXX XXXX 4321"
+            />
+            <Select
+              id="account-type"
+              label="Account type"
+              value={accountForm.account_type}
+              onChange={(e) => setAccountForm((c) => ({ ...c, account_type: e.target.value }))}
+            >
               <option value="current">Current</option>
               <option value="savings">Savings</option>
               <option value="cash">Cash</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant">
-            IFSC code
-            <input value={accountForm.ifsc_code} onChange={(e) => setAccountForm({ ...accountForm, ifsc_code: e.target.value })} className="input-field mt-1 font-code-mono text-code-mono" placeholder="HDFC0001234" />
-          </label>
-          <label className="text-xs font-semibold text-on-surface-variant">
-            Opening balance (₹)
-            <input type="number" step="0.01" min="0" value={accountForm.opening_balance} onChange={(e) => setAccountForm({ ...accountForm, opening_balance: e.target.value })} className="input-field mt-1 tnum" />
-          </label>
-          <div className="md:col-span-3 flex items-center gap-space-sm">
-            <button type="submit" disabled={busy} className="px-space-md py-space-xs rounded bg-secondary text-on-secondary text-label-md font-semibold disabled:opacity-60">
-              {busy ? 'Saving' : 'Add account'}
-            </button>
-            <button type="button" onClick={() => setShowAccountForm(false)} className="px-space-md py-space-xs rounded border border-outline text-label-md font-semibold text-on-surface">
-              Cancel
-            </button>
-          </div>
-        </form>
+            </Select>
+            <Input
+              id="ifsc-code"
+              label="IFSC code"
+              value={accountForm.ifsc_code}
+              onChange={(e) => setAccountForm((c) => ({ ...c, ifsc_code: e.target.value }))}
+              hint="HDFC0001234"
+            />
+            <Input
+              id="opening-balance"
+              label="Opening balance (₹)"
+              type="number"
+              step="0.01"
+              min="0"
+              value={accountForm.opening_balance}
+              onChange={(e) => setAccountForm((c) => ({ ...c, opening_balance: e.target.value }))}
+            />
+            <div className="md:col-span-3 flex flex-col-reverse gap-2 border-t border-line px-4 py-3 sm:flex-row sm:items-end sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAccountForm(false)}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-line px-3 text-[12px] font-medium text-primary-text transition-colors duration-micro hover:bg-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              >
+                Cancel
+              </button>
+              <Button type="submit" disabled={busy} loading={busy} className="ml-auto">
+                <Plus size={16} className="text-on-secondary" /> Add account
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
 
       {showImportForm && (
-        <form onSubmit={importStatement} className="bg-surface-container-lowest border border-outline rounded-lg p-space-md space-y-space-sm">
-          <label className="block text-xs font-semibold text-on-surface-variant">
-            Bank account
-            <select required value={importAccount} onChange={(e) => setImportAccount(e.target.value)} className="select-field mt-1">
+        <Card flush className="space-y-1">
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Import statement</h2>
+          </div>
+          <form onSubmit={importStatement} noValidate className="p-4 pb-2 space-y-3">
+            <Select
+              id="import-account"
+              label="Bank account"
+              value={importAccount}
+              onChange={(e) => setImportAccount(e.target.value)}
+              required
+              hint="Select the account the statement belongs to"
+            >
               <option value="">Select the account</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.bank_name} · {a.account_number_masked}</option>
               ))}
-            </select>
-          </label>
-          <label className="block text-xs font-semibold text-on-surface-variant">
-            Statement CSV
-            <textarea
-              rows={5}
+            </Select>
+            <Textarea
+              id="statement-csv"
+              label="Statement CSV"
               value={statementText}
               onChange={(e) => setStatementText(e.target.value)}
-              placeholder={'transaction_date,description,debit,credit\n2026-04-02,NEFT from client, ,25000'}
-              className="input-field mt-1 font-code-mono text-code-mono"
+              rows={5}
+              hint="transaction_date,description,debit,credit"
             />
-          </label>
-          <div className="flex items-center gap-space-sm">
-            <button type="submit" disabled={busy || accounts.length === 0} className="px-space-md py-space-xs rounded bg-secondary text-on-secondary text-label-md font-semibold disabled:opacity-60">
-              {busy ? 'Importing' : 'Import transactions'}
-            </button>
-            <button type="button" onClick={() => setShowImportForm(false)} className="px-space-md py-space-xs rounded border border-outline text-label-md font-semibold text-on-surface">
-              Cancel
-            </button>
-            <span className="text-xs text-on-surface-variant">
+            <p className="text-[10px] leading-4 text-ink-3">
               Expected columns: transaction_date, description, debit, credit. Reference and value_date are used when present.
-            </span>
-          </div>
-        </form>
+            </p>
+            <div className="flex flex-col-reverse gap-2 border-t border-line px-4 py-3 sm:flex-row sm:items-end sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setShowImportForm(false)}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-line px-3 text-[12px] font-medium text-primary-text transition-colors duration-micro hover:bg-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              >
+                Cancel
+              </button>
+              <Button type="submit" disabled={busy || accounts.length === 0} loading={busy} className="ml-auto">
+                Import transactions
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-space-sm">
-        {[
-          { label: 'Bank accounts', value: accounts.length, tone: 'text-on-surface' },
-          { label: 'Book balance', value: formatMoneyIN(bookBalance), tone: 'text-on-surface' },
-          { label: 'Unmatched', value: unmatched, tone: 'text-warning' },
-          { label: 'Matched', value: reconciled, tone: 'text-secondary' },
-        ].map((item) => (
-          <div key={item.label} className="bg-surface-container-lowest border border-outline rounded-lg p-space-md">
-            <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">{item.label}</p>
-            <p className={`font-numeric-kpi text-numeric-kpi font-bold tnum mt-space-2xs ${item.tone}`}>{item.value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Bank accounts" note={`${accounts.length} accounts on record`} metrics={[{ label: 'Accounts', value: String(accounts.length) }]} />
+        <StatCard title="Book balance" readout={{ value: formatMoneyIN(bookBalance), tone: 'accent' }} metrics={[{ label: 'Accounts', value: String(accounts.length) }]} />
+        <StatCard title="Unmatched" readout={{ value: String(unmatched), tone: 'negative' }} metrics={[{ label: 'Transactions', value: 'awaiting match' }]} />
+        <StatCard title="Matched" readout={{ value: String(reconciled), tone: 'positive' }} metrics={[{ label: 'Transactions', value: 'reconciled' }]} />
       </div>
 
-      <div className="relative max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
-        <input
+      <div className="flex-1 max-w-md">
+        <Input
+          icon={<Search size={16} className="text-on-surface-variant" />}
           placeholder="Search description, reference or bank"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="input-field pl-9"
         />
       </div>
 
-      <div className="bg-surface-container-lowest border border-outline rounded-lg overflow-hidden">
-        <div className="px-space-md py-space-sm border-b border-outline">
-          <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Bank transactions</h2>
+      {error && (
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
+          {error}
         </div>
-        {loading ? (
-          <p className="px-space-md py-space-lg text-sm text-on-surface-variant text-center">Loading transactions...</p>
-        ) : filtered.length === 0 ? (
-          <p className="px-space-md py-space-lg text-sm text-on-surface-variant text-center">
-            No transaction yet. Import a statement to bring the bank lines in.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-outline">
-                  <th className="text-left px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Date</th>
-                  <th className="text-left px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Description</th>
-                  <th className="text-left px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Account</th>
-                  <th className="text-right px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Credit</th>
-                  <th className="text-right px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Debit</th>
-                  <th className="text-center px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Status</th>
-                  <th className="text-right px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((tx) => (
-                  <tr key={tx.id} className="border-b border-outline last:border-0">
-                    <td className="px-space-md py-space-sm text-on-surface-variant tnum">{formatDateIN(tx.transaction_date)}</td>
-                    <td className="px-space-md py-space-sm text-on-surface">
-                      {tx.description || '—'}
-                      {tx.reference && <span className="block font-code-mono text-code-mono text-xs text-outline">{tx.reference}</span>}
-                    </td>
-                    <td className="px-space-md py-space-sm text-on-surface-variant">{tx.bank_name}</td>
-                    <td className="px-space-md py-space-sm text-right text-on-surface tnum">{Number(tx.credit) ? formatMoneyIN(tx.credit) : '—'}</td>
-                    <td className="px-space-md py-space-sm text-right text-on-surface tnum">{Number(tx.debit) ? formatMoneyIN(tx.debit) : '—'}</td>
-                    <td className="px-space-md py-space-sm text-center"><StatusBadge status={tx.match_status || 'unmatched'} /></td>
-                    <td className="px-space-md py-space-sm text-right">
-                      {tx.match_status === 'unmatched' ? (
-                        <button
-                          onClick={() => {
-                            setMatchId(matchId === tx.id ? null : tx.id);
-                            setMatchRecordId('');
-                            setMatchType(Number(tx.credit) ? 'invoice' : 'bill');
-                          }}
-                          className="inline-flex items-center gap-space-2xs text-xs font-semibold text-secondary hover:underline"
-                        >
-                          Match <ArrowRight size={13} />
-                        </button>
-                      ) : (
-                        <span className="text-xs text-on-surface-variant">{tx.matched_record_type || 'matched'}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      )}
+
+      <Card flush>
+        <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+          <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Bank transactions</h2>
+        </div>
+        <div className="overflow-x-auto p-4">
+          <DataTable
+            columns={[
+              {
+                key: 'date',
+                label: 'DATE',
+                align: 'right',
+                render: (row) => <RowValue value={formatDateIN(row.transaction_date || '')} tone="neutral" />,
+              },
+              { key: 'description', label: 'DESCRIPTION', render: (row) => <span className="block min-w-0"><span className="block truncate text-[11px] leading-4 text-primary-text">{row.description || '—'}</span>{row.reference && <span className="mt-0.5 block text-[9px] leading-3 font-mono text-ink-3">{row.reference}</span>}</span> },
+              { key: 'bank', label: 'ACCOUNT', render: (row) => <span className="text-[11px] leading-4 text-ink-3">{row.bank_name}</span> },
+              { key: 'credit', label: 'CREDIT', align: 'right', render: (row) => <RowValue value={Number(row.credit) ? formatMoneyIN(row.credit) : '—'} tone="neutral" /> },
+              { key: 'debit', label: 'DEBIT', align: 'right', render: (row) => <RowValue value={Number(row.debit) ? formatMoneyIN(row.debit) : '—'} tone="neutral" /> },
+              { key: 'status', label: 'STATUS', align: 'right', render: (row) => <StatusBadge status={row.match_status || 'unmatched'} /> },
+              {
+                key: 'action',
+                label: '',
+                align: 'right',
+                render: (row) => {
+                  if (row.match_status !== 'unmatched') {
+                    return <span className="text-[10px] text-ink-3">{row.matched_record_type || 'matched'}</span>;
+                  }
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMatchId(matchId === row.id ? null : row.id);
+                        setMatchRecordId('');
+                        setMatchType(Number(row.credit) ? 'invoice' : 'bill');
+                      }}
+                      title="Match transaction"
+                      className="p-1.5 rounded-lg text-brand hover:bg-brand-soft transition-colors duration-micro"
+                    >
+                      <ArrowRight size={14} className="text-on-secondary" /> Match
+                    </button>
+                  );
+                },
+              },
+            ]}
+            rows={filtered}
+            emptyMessage="No transaction yet. Import a statement to bring the bank lines in."
+          />
+        </div>
+      </Card>
 
       {matchId && (
-        <div className="bg-surface-container-lowest border border-secondary rounded-lg p-space-md space-y-space-sm">
-          <p className="text-sm font-semibold text-on-surface">Match this transaction</p>
-          <div className="flex flex-col md:flex-row md:items-end gap-space-sm">
-            <label className="text-xs font-semibold text-on-surface-variant">
-              Record type
-              <select value={matchType} onChange={(e) => setMatchType(e.target.value as 'bill' | 'invoice')} className="select-field mt-1">
-                <option value="bill">Bill</option>
-                <option value="invoice">Invoice</option>
-              </select>
-            </label>
-            <label className="text-xs font-semibold text-on-surface-variant flex-1">
-              Record
-              <select value={matchRecordId} onChange={(e) => setMatchRecordId(e.target.value)} className="select-field mt-1">
-                <option value="">Select the record</option>
-                {(matchType === 'bill' ? bills : invoices).map((record: any) => (
-                  <option key={record.id} value={record.id}>
-                    {record.bill_number || record.invoice_number} · {record.vendor_name || record.customer_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button onClick={() => submitMatch(matchId)} className="px-space-md py-space-xs rounded bg-secondary text-on-secondary text-label-md font-semibold">
-              Confirm match
-            </button>
-            <button onClick={() => setMatchId(null)} className="px-space-md py-space-xs rounded border border-outline text-label-md font-semibold text-on-surface">
-              Cancel
-            </button>
+        <Card flush className="max-w-sm mx-auto mt-4 space-y-1">
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Match this transaction</h2>
           </div>
-        </div>
+          <form onSubmit={(e) => { e.preventDefault(); submitMatch(); }} noValidate className="p-4 pb-2 space-y-3">
+            <Select
+              id="match-record-type"
+              label="Record type"
+              value={matchType}
+              onChange={(e) => setMatchType(e.target.value as 'bill' | 'invoice')}
+            >
+              <option value="bill">Bill</option>
+              <option value="invoice">Invoice</option>
+            </Select>
+            <Select
+              id="match-record"
+              label="Record"
+              value={matchRecordId}
+              onChange={(e) => setMatchRecordId(e.target.value)}
+              required
+              hint="Select the record"
+            >
+              <option value="">Select the record</option>
+              {(matchType === 'bill' ? bills : invoices).map((record: any) => (
+                <option key={record.id} value={record.id}>{record.bill_number || record.invoice_number} · {record.vendor_name || record.customer_name}</option>
+              ))}
+            </Select>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={!matchRecordId} className="w-auto">
+                Confirm match
+              </Button>
+              <button
+                type="button"
+                onClick={() => setMatchId(null)}
+                className="ml-2 inline-flex h-9 items-center justify-center rounded-lg border border-line px-3 text-[12px] font-medium text-primary-text transition-colors duration-micro hover:bg-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Card>
       )}
     </div>
   );
 }
+

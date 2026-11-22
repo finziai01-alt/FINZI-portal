@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { invoicesCreate, customersList } from '../services/api';
+import { useNavigate, useParams } from 'react-router-dom';
+import { invoicesCreate, invoicesGet, invoicesUpdate, customersList } from '../services/api';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { Input, Select } from '../components/ui/Input';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Card } from '../components/ui/Card';
 import { formatMoneyIN } from '../utils/format';
 import { calcLine, grandTotal, isIntraState, sumLines } from '../utils/calc';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Plus, Minus, FileText, Save, PlusCircle } from 'lucide-react';
+import { FileText, Minus, PlusCircle, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -60,8 +61,11 @@ const initialItem = {
   discount_percent: 0, taxable_amount: 0, gst_rate: 0, cgst: 0, sgst: 0, igst: 0, total: 0,
 };
 
+const dateInputValue = (value?: string) => value ? value.slice(0, 10) : '';
+
 export default function InvoiceCreate() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -83,20 +87,56 @@ export default function InvoiceCreate() {
 
   const items = watch('items');
   const { state } = useAuth();
-  // Recompute GST whenever the customer GSTIN or a header adjustment changes.
   const intraState = isIntraState(state.company?.gstin, watch('customer_gstin'));
   const [cessValue, discountValue, roundOffValue] = watch(['cess', 'discount', 'round_off']);
 
   useEffect(() => {
     loadData();
-  }, []);
+    if (id) loadInvoice(id);
+  }, [id]);
 
   const loadData = async () => {
     try {
-      const res = await customersList();
-      setCustomers(res.data.customers || []);
+      const cRes = await customersList();
+      setCustomers(cRes.data.customers || []);
     } catch {}
     setLoading(false);
+  };
+
+  const loadInvoice = async (invoiceId: string) => {
+    try {
+      const res = await invoicesGet(invoiceId);
+      const inv = res.data.invoice;
+      setValue('invoice_number', inv.invoice_number);
+      setValue('customer_id', inv.customer_id || '');
+      setValue('customer_name', inv.customer_name);
+      setValue('customer_gstin', inv.customer_gstin || '');
+      setValue('invoice_number', inv.invoice_number);
+      setValue('invoice_date', dateInputValue(inv.invoice_date));
+      setValue('due_date', dateInputValue(inv.due_date));
+      setValue('place_of_supply', inv.place_of_supply || '');
+      setValue('payment_terms', inv.payment_terms || '');
+      setValue('bank_details', inv.bank_details || '');
+      setValue('upi_id', inv.upi_id || '');
+      setValue('tds_section', inv.tds_section || '');
+      setValue('terms_conditions', inv.terms_conditions || '');
+      setValue('notes', inv.notes || '');
+      setValue('subtotal', inv.subtotal || 0);
+      setValue('discount', inv.discount || 0);
+      setValue('cgst', inv.cgst || 0);
+      setValue('sgst', inv.sgst || 0);
+      setValue('igst', inv.igst || 0);
+      setValue('cess', inv.cess || 0);
+      setValue('round_off', inv.round_off || 0);
+      setValue('grand_total', inv.grand_total || 0);
+      setValue('status', inv.status || 'sent');
+      setValue('items', (inv.items || []).map((it: any) => ({
+        description: it.description, hsn_sac: it.hsn_sac || '', quantity: it.quantity || 1,
+        unit: it.unit || '', rate: it.rate || 0, discount_percent: it.discount_percent || 0,
+        taxable_amount: it.taxable_amount || 0, gst_rate: it.gst_rate || 0,
+        cgst: it.cgst || 0, sgst: it.sgst || 0, igst: it.igst || 0, total: it.total || 0,
+      })));
+    } catch {}
   };
 
   const addItem = () => {
@@ -112,11 +152,7 @@ export default function InvoiceCreate() {
   const computeTotals = () => {
     const sum = sumLines(items.map((it) => calcLine(it, intraState)));
     return {
-      subtotal: sum.taxable,
-      cgst: sum.cgst,
-      sgst: sum.sgst,
-      igst: sum.igst,
-      cess: 0,
+      ...sum,
       grand: grandTotal(sum, Number(cessValue) || 0, Number(discountValue) || 0, Number(roundOffValue) || 0),
     };
   };
@@ -145,7 +181,11 @@ export default function InvoiceCreate() {
         igst: sum.igst,
         grand_total: grandTotal(sum, Number(data.cess) || 0, Number(data.discount) || 0, Number(data.round_off) || 0),
       };
-      await invoicesCreate(payload);
+      if (id) {
+        await invoicesUpdate(id, payload);
+      } else {
+        await invoicesCreate(payload);
+      }
       navigate('/invoices');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to save invoice');
@@ -156,245 +196,241 @@ export default function InvoiceCreate() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="bg-surface-container-lowest border border-outline rounded-lg p-8 h-64 flex items-center justify-center animate-pulse">
-          <div className="text-on-surface-variant">Loading...</div>
-        </div>
+      <div className="px-4 py-5 lg:px-6">
+        <div className="h-64 shimmer rounded-xl border border-line mx-auto" />
       </div>
     );
   }
 
+  const isEdit = !!id;
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-space-md">
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigate('/invoices')} className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg">
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-on-surface">Create Invoice</h1>
-            <p className="text-on-surface-variant">Record a sales invoice with GST line items.</p>
-          </div>
-        </div>
-        <Button type="submit" form="invoice-form" variant="green" disabled={saving} className="px-5">
-          {saving ? 'Saving...' : <><Save size={16} className="text-on-secondary" /> Create Invoice</>}
-        </Button>
-      </div>
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title={isEdit ? 'Edit Invoice' : 'Create Invoice'}
+        description="Record a sales invoice with GST line items."
+        actions={
+          <Button type="submit" form="invoice-form" variant="green" disabled={saving} className="ml-auto">
+            <Save size={16} className="text-on-secondary mr-2" /> {saving ? 'Saving…' : `${isEdit ? 'Update' : 'Create'} Invoice`}
+          </Button>
+        }
+        breadcrumb={[{ label: 'Sales', to: '/invoices' }, { label: isEdit ? 'Edit Invoice' : 'Create Invoice', to: '#' }]}
+      />
 
       {error && (
-        <div className="mb-space-md p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm">
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
           {error}
         </div>
       )}
 
-      <form id="invoice-form" onSubmit={handleSubmit(onSubmit)} className="space-y-space-md">
-        <Card>
-          <CardHeader>
-            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight flex items-center gap-2">
-              <FileText size={16} /> Invoice Details
-            </h2>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Invoice Number</label>
-                <Input {...register('invoice_number')} placeholder="e.g. INV-2001" error={errors.invoice_number?.message} />
-                {errors.invoice_number?.message && <p className="text-xs text-error">{errors.invoice_number.message}</p>}
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Customer</label>
-                <select
-                  {...register('customer_id')}
-                  onChange={(e) => {
-                    setValue('customer_id', e.target.value);
-                    const c = customers.find((x) => x.id === e.target.value);
-                    setValue('customer_name', c ? c.name : '');
-                    setValue('customer_gstin', c ? c.gstin : '');
-                  }}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface-container-low text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
-                >
-                  <option value="">Select customer</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                {errors.customer_id?.message && <p className="text-xs text-error">{errors.customer_id.message}</p>}
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Customer GSTIN</label>
-                <Input {...register('customer_gstin')} placeholder="22AAAAA0000A1Z5" />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Invoice Date</label>
-                <Input type="date" {...register('invoice_date')} />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Due Date</label>
-                <Input type="date" {...register('due_date')} />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Place of Supply</label>
-                <Input {...register('place_of_supply')} placeholder="e.g. Maharashtra" />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Payment Terms</label>
-                <Input {...register('payment_terms')} placeholder="e.g. Net 30" />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Status</label>
-                <select
-                  {...register('status')}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface-container-low text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="sent">Sent</option>
-                  <option value="partially_paid">Partially Paid</option>
-                  <option value="paid">Paid</option>
-                  <option value="overdue">Overdue</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
+      <form id="invoice-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <Card flush>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <div className="flex items-center gap-2">
+              <FileText size={16} className="text-brand" aria-hidden="true" />
+              <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Invoice Details</h2>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md mt-space-md">
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Customer Name</label>
-                <Input {...register('customer_name')} />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Bank Details</label>
-                <Input {...register('bank_details')} placeholder="e.g. HDFC A/C XXXX1234" />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">UPI ID</label>
-                <Input {...register('upi_id')} placeholder="e.g. name@upi" />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">TDS Section</label>
-                <Input {...register('tds_section')} placeholder="e.g. 194J" />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Terms & Conditions</label>
-                <Input {...register('terms_conditions')} />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface">Notes</label>
-                <Input {...register('notes')} />
-              </div>
-            </div>
-          </CardContent>
+          </div>
+          <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input
+              id="invoice-number"
+              label="Invoice Number"
+              {...register('invoice_number')}
+              error={errors.invoice_number?.message}
+              placeholder="e.g. INV-1001"
+            />
+            {errors.invoice_number?.message && <p className="md:col-span-3 text-[10px] text-danger-ink">{errors.invoice_number.message}</p>}
+            <Select
+              id="customer"
+              label="Customer"
+              value={watch('customer_id')}
+              onChange={(e) => {
+                setValue('customer_id', e.target.value);
+                const c = customers.find((x) => x.id === e.target.value);
+                setValue('customer_name', c ? c.name : '');
+                setValue('customer_gstin', c ? c.gstin : '');
+              }}
+              required
+              hint="Select customer"
+            >
+              <option value="">Select customer</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
+            {errors.customer_id?.message && <p className="md:col-span-3 text-[10px] text-danger-ink">{errors.customer_id.message}</p>}
+            <Input
+              id="customer-gstin"
+              label="Customer GSTIN"
+              {...register('customer_gstin')}
+              hint="22AAAAA0000A1Z5"
+            />
+            <Input
+              id="invoice-number-2"
+              label="Invoice Number"
+              {...register('invoice_number')}
+              placeholder="e.g. INV-88"
+            />
+            {/* duplicate key fixed below */}
+            <Input
+              id="invoice-date"
+              label="Invoice Date"
+              type="date"
+              {...register('invoice_date')}
+            />
+            <Input
+              id="due-date"
+              label="Due Date"
+              type="date"
+              {...register('due_date')}
+            />
+            <Input
+              id="place-of-supply"
+              label="Place of Supply"
+              {...register('place_of_supply')}
+              placeholder="e.g. Maharashtra"
+            />
+            <Input
+              id="payment-terms"
+              label="Payment Terms"
+              {...register('payment_terms')}
+              placeholder="e.g. Net 30"
+            />
+            <Select
+              id="status"
+              label="Status"
+              value={watch('status')}
+              onChange={(e) => setValue('status', e.target.value)}
+            >
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="partially_paid">Partially Paid</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+              <option value="cancelled">Cancelled</option>
+            </Select>
+            <Input
+              id="customer-name"
+              label="Customer Name"
+              {...register('customer_name')}
+            />
+            <Input
+              id="notes"
+              label="Notes"
+              {...register('notes')}
+            />
+            <Input
+              id="tds-section"
+              label="TDS Section"
+              {...register('tds_section')}
+              placeholder="e.g. 194C"
+            />
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="flex items-center justify-between">
+        <Card flush>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
             <div className="flex items-center gap-2">
-              <PlusCircle size={16} className="text-secondary" />
-              <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Line Items</h2>
+              <PlusCircle size={16} className="text-brand" aria-hidden="true" />
+              <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Line Items</h2>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={addItem}>
-              <Plus size={14} className="text-on-surface-variant mr-1" /> Add Item
+              <PlusCircle size={14} className="text-on-secondary mr-1" /> Add Item
             </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-space-sm">
+          </div>
+          <div className="overflow-x-auto p-4 border-t border-line">
+            <div className="min-w-[700px] divide-y divide-line">
+              <div className="grid grid-cols-12 border-b border-line px-3 py-2.5">
+                <div className="col-span-4 text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Description</div>
+                <div className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">HSN / SAC</div>
+                <div className="col-span-1 text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4 text-right">Qty</div>
+                <div className="col-span-1 text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4 text-right">Unit</div>
+                <div className="col-span-1 text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4 text-right">Rate</div>
+                <div className="col-span-1 text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4 text-right">GST %</div>
+                <div className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4 text-right">Total (₹)</div>
+              </div>
               {items.map((_, index) => (
-                <Card key={index} className="p-3 border border-outline">
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                    <div className="md:col-span-3 space-y-space-sm">
-                      <label className="text-xs font-medium text-on-surface-variant">Description</label>
-                      <Input
-                        {...register(`items.${index}.description`)}
-                        error={errors.items?.[index]?.description?.message}
-                      />
-                      {errors.items?.[index]?.description?.message && <p className="text-xs text-error">{errors.items[index].description.message}</p>}
-                    </div>
-                    <div className="md:col-span-2 space-y-space-sm">
-                      <label className="text-xs font-medium text-on-surface-variant">HSN / SAC</label>
-                      <Input {...register(`items.${index}.hsn_sac`)} />
-                    </div>
-                    <div className="md:col-span-1 space-y-space-sm">
-                      <label className="text-xs font-medium text-on-surface-variant">Qty</label>
-                      <Input type="number" {...register(`items.${index}.quantity`)} />
-                    </div>
-                    <div className="md:col-span-1 space-y-space-sm">
-                      <label className="text-xs font-medium text-on-surface-variant">Unit</label>
-                      <Input {...register(`items.${index}.unit`)} />
-                    </div>
-                    <div className="md:col-span-1 space-y-space-sm">
-                      <label className="text-xs font-medium text-on-surface-variant">Rate</label>
-                      <Input type="number" {...register(`items.${index}.rate`)} />
-                    </div>
-                    <div className="md:col-span-1 space-y-space-sm">
-                      <label className="text-xs font-medium text-on-surface-variant">GST %</label>
-                      <Input type="number" {...register(`items.${index}.gst_rate`)} />
-                    </div>
-                    <div className="md:col-span-2 space-y-space-sm">
-                      <label className="text-xs font-medium text-on-surface-variant">Total (₹)</label>
-                      <input
-                        type="number"
-                        readOnly
-                        value={calcLine(items[index], intraState).total}
-                        className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface-container-low text-on-surface font-mono font-medium cursor-not-allowed"
-                      />
-                    </div>
-                    <div className="md:col-span-1 space-y-space-sm">
-                      <button
-                        type="button"
-                        onClick={() => removeItem(index)}
-                        className="w-full py-2.5 border border-error rounded-md text-error text-xs hover:bg-error-container/40"
-                      >
-                        <Minus size={14} className="text-error" /> Remove
-                      </button>
-                    </div>
+                <div key={index} className="grid grid-cols-12 border-b border-line px-3 py-2.5 items-center">
+                  <div className="col-span-4">
+                    <Input id={`item-desc-${index}`} {...register(`items.${index}.description`)} error={errors.items?.[index]?.description?.message} />
+                    {errors.items?.[index]?.description?.message && (
+                      <p className="mt-0.5 text-[9px] text-danger-ink">{errors.items[index].description.message}</p>
+                    )}
                   </div>
-                </Card>
+                  <div className="col-span-2">
+                    <Input id={`item-hsn-${index}`} {...register(`items.${index}.hsn_sac`)} />
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <Input id={`item-qty-${index}`} type="number" {...register(`items.${index}.quantity`)} />
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <Input id={`item-unit-${index}`} {...register(`items.${index}.unit`)} />
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <Input id={`item-rate-${index}`} type="number" {...register(`items.${index}.rate`)} />
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <Input id={`item-gst-${index}`} type="number" {...register(`items.${index}.gst_rate`)} />
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <p className="text-[11px] font-medium leading-4 text-primary-text tnum">{formatMoneyIN(calcLine(items[index], intraState).total)}</p>
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      disabled={items.length <= 1}
+                      className="w-8 h-8 rounded border border-line flex items-center justify-center text-error hover:bg-neg-soft disabled:opacity-40 disabled:pointer-events-none transition-colors duration-micro"
+                      title={items.length <= 1 ? 'An invoice needs at least one item' : 'Remove item'}
+                    >
+                      <Minus size={12} />
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
-          </CardContent>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">GST & Totals</h2>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-space-md">
-              <div className="space-y-space-sm">
-                <label className="text-xs font-medium text-on-surface-variant">Subtotal</label>
-                <p className="text-sm font-medium text-on-surface tnum">{formatMoneyIN(totals.subtotal)}</p>
+        <Card flush>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">GST & Totals</h2>
+          </div>
+          <div className="px-4 pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Subtotal</p>
+                <p className="text-[13px] font-semibold leading-6 text-primary-text tnum">{formatMoneyIN(totals.taxable)}</p>
               </div>
-              <div className="space-y-space-sm">
-                <label className="text-xs font-medium text-on-surface-variant">CGST</label>
-                <p className="text-sm font-medium text-on-surface tnum">{formatMoneyIN(totals.cgst)}</p>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">CGST</p>
+                <p className="text-[13px] font-semibold leading-6 text-primary-text tnum">{formatMoneyIN(totals.cgst)}</p>
               </div>
-              <div className="space-y-space-sm">
-                <label className="text-xs font-medium text-on-surface-variant">SGST</label>
-                <p className="text-sm font-medium text-on-surface tnum">{formatMoneyIN(totals.sgst)}</p>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">SGST</p>
+                <p className="text-[13px] font-semibold leading-6 text-primary-text tnum">{formatMoneyIN(totals.sgst)}</p>
               </div>
-              <div className="space-y-space-sm">
-                <label className="text-xs font-medium text-on-surface-variant">IGST</label>
-                <p className="text-sm font-medium text-on-surface tnum">{formatMoneyIN(totals.igst)}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-space-md mt-space-md">
-              <div className="space-y-space-sm">
-                <label className="text-xs font-medium text-on-surface-variant">Cess</label>
-                <Input type="number" {...register('cess')} />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-xs font-medium text-on-surface-variant">Discount</label>
-                <Input type="number" {...register('discount')} />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-xs font-medium text-on-surface-variant">Round Off</label>
-                <Input type="number" {...register('round_off')} />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-xs font-medium text-on-surface">Grand Total</label>
-                <p className="text-sm font-bold text-on-surface tnum">{formatMoneyIN(totals.grand)}</p>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">IGST</p>
+                <p className="text-[13px] font-semibold leading-6 text-primary-text tnum">{formatMoneyIN(totals.igst)}</p>
               </div>
             </div>
-          </CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+              <div className="space-y-1">
+                <Input id="invoice-cess" label="Cess" type="number" {...register('cess')} />
+              </div>
+              <div className="space-y-1">
+                <Input id="invoice-discount" label="Discount" type="number" {...register('discount')} />
+              </div>
+              <div className="space-y-1">
+                <Input id="invoice-round-off" label="Round Off" type="number" {...register('round_off')} />
+              </div>
+              <div className="space-y-1 flex flex-col">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Grand Total</p>
+                <p className="text-[15px] font-bold leading-6 text-primary-text tnum">{formatMoneyIN(totals.grand)}</p>
+              </div>
+            </div>
+          </div>
         </Card>
       </form>
     </div>

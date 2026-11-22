@@ -1,12 +1,14 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { billsGet, billsRecordPayment, billsDuplicate } from '../services/api';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { Input, Select } from '../components/ui/Input';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Card } from '../components/ui/Card';
+import { DataTable } from '../components/ui/DataTable';
 import { formatMoneyIN, formatDateIN } from '../utils/format';
-import { ArrowLeft, Printer, CreditCard, Mail, AlertCircle } from 'lucide-react';
+import { Printer, CreditCard } from 'lucide-react';
 
 export default function BillDetails() {
   const { id } = useParams();
@@ -39,8 +41,8 @@ export default function BillDetails() {
     }
   };
 
-  const handleRecordPayment = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleRecordPayment = async (event: React.FormEvent) => {
+    event.preventDefault();
     setPaymentError('');
     const amount = Number(paymentAmount);
     if (!amount || amount <= 0) {
@@ -81,177 +83,180 @@ export default function BillDetails() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="bg-surface-container-lowest border border-outline rounded-lg p-8 h-64 flex items-center justify-center animate-pulse">
-          <div className="text-on-surface-variant">Loading bill...</div>
-        </div>
+      <div className="px-4 py-5 lg:px-6">
+        <div className="h-64 shimmer rounded-xl border border-line mx-auto" />
       </div>
     );
   }
 
   if (!bill) {
     return (
-      <div className="p-6">
-        <button onClick={() => navigate('/bills')} className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="bg-surface-container-lowest border border-outline rounded-lg p-8 mt-4">
-          <p className="text-error font-semibold">{loadError || 'Bill not found'}</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={loadBill}>Try again</Button>
-        </div>
+      <div className="px-4 py-5 lg:px-6">
+        <Card flush className="text-center py-16">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-sub text-ink-3">
+            <CreditCard size={20} />
+          </div>
+          <h2 className="mt-4 text-[12.5px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">
+            {loadError || 'Bill not found'}
+          </h2>
+          <Button variant="outline" onClick={() => loadBill()} className="mt-4">
+            Try again
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/bills')} className="mt-2 ml-2">
+            Back to bills
+          </Button>
+        </Card>
       </div>
     );
   }
 
+  const balanceDue = Number(bill.grand_total) - Number(bill.amount_paid || 0);
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-space-md">
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigate('/bills')} className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg">
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-on-surface">Bill Details</h1>
-            <p className="text-on-surface-variant">{bill.bill_number}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-space-sm">
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer size={14} /> Print
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={duplicating}>
-            {duplicating ? 'Duplicating...' : 'Duplicate'}
-          </Button>
-        </div>
-      </div>
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title="Bill Details"
+        description={bill.bill_number}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer size={16} /> Print
+            </Button>
+            <Button variant="outline" onClick={handleDuplicate} disabled={duplicating}>
+              {duplicating ? 'Duplicating…' : 'Duplicate'}
+            </Button>
+          </>
+        }
+        breadcrumb={[{ label: 'Bills', to: '/bills' }, { label: bill.bill_number, to: '#' }]}
+      />
 
       {actionError && (
-        <div className="mb-space-md p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm">
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
           {actionError}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-md">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Bill Summary</h2>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-space-md mb-space-md">
-                <div>
-                  <p className="text-xs font-semibold text-on-surface-variant">Vendor</p>
-                  <p className="text-on-surface font-medium">{bill.vendor_name}</p>
-                  <p className="text-xs text-on-surface-variant">{bill.vendor_gstin || 'No GSTIN'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-on-surface-variant">Bill Number</p>
-                  <p className="text-on-surface font-medium">{bill.bill_number}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-on-surface-variant">Invoice Number</p>
-                  <p className="text-on-surface font-medium">{bill.invoice_number || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-on-surface-variant">Invoice Date</p>
-                  <p className="text-on-surface font-medium">{bill.invoice_date ? formatDateIN(bill.invoice_date) : '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-on-surface-variant">Due Date</p>
-                  <p className="text-on-surface font-medium">{formatDateIN(bill.due_date || '') || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-on-surface-variant">Grand Total</p>
-                  <p className="text-on-surface font-bold tnum">{formatMoneyIN(bill.grand_total)}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-on-surface-variant">Amount Paid</p>
-                  <p className="text-on-surface font-medium tnum">{formatMoneyIN(bill.amount_paid)}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-on-surface-variant">Balance Due</p>
-                  <p className="text-on-surface font-bold tnum">{formatMoneyIN(bill.balance_due)}</p>
-                </div>
+          <Card flush>
+            <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+              <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Bill Summary</h2>
+            </div>
+            <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Vendor</p>
+                <p className="text-[11px] font-medium leading-4 text-primary-text">{bill.vendor_name}</p>
+                <p className="mt-0.5 text-[10px] text-ink-3">{bill.vendor_gstin || 'No GSTIN'}</p>
               </div>
-              <div className="flex items-center justify-between pt-space-md border-t border-outline">
-                <div className="text-xs text-on-surface-variant">Status</div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Bill Number</p>
+                <p className="text-[11px] font-medium leading-4 text-primary-text">{bill.bill_number}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Invoice Number</p>
+                <p className="text-[11px] font-medium leading-4 text-primary-text">{bill.invoice_number || '—'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Invoice Date</p>
+                <p className="text-[11px] font-medium leading-4 text-primary-text">{bill.invoice_date ? formatDateIN(bill.invoice_date) : '—'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Due Date</p>
+                <p className="text-[11px] font-medium leading-4 text-primary-text">{bill.due_date ? formatDateIN(bill.due_date) : '—'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Grand Total</p>
+                <p className="text-[13px] font-bold leading-6 text-primary-text tnum">{formatMoneyIN(bill.grand_total)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Amount Paid</p>
+                <p className="text-[13px] font-medium leading-6 text-primary-text tnum">{formatMoneyIN(bill.amount_paid || 0)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Balance Due</p>
+                <p className="text-[13px] font-bold leading-6 text-error tnum">{formatMoneyIn(balanceDue)}</p>
+              </div>
+              <div className="space-y-1 flex items-end">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.062em] text-ink-4">Status</p>
                 <StatusBadge status={bill.status} />
               </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
 
-        <div>
-          <Card>
-            <CardHeader>
-              <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Record Payment</h2>
-            </CardHeader>
-            <CardContent className="space-y-space-md">
-              <form onSubmit={handleRecordPayment} className="space-y-space-md">
+        <div className="lg:col-span-1">
+          <Card flush>
+            <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+              <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Record Payment</h2>
+            </div>
+            <div className="px-4 pb-4">
+              <form onSubmit={handleRecordPayment} className="space-y-3">
                 <Input
+                  id="payment-amount"
                   label="Amount (₹)"
                   type="number"
                   min="0"
                   step="0.01"
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  error={paymentError || undefined}
+                  error={paymentError ? 'Enter an amount greater than zero' : undefined}
                 />
-                <select
+                {paymentError && <p className="text-[10px] text-danger-ink">{paymentError}</p>}
+                <Select
+                  id="payment-method"
+                  label="Method"
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="block w-full px-3 py-2.5 border border-border rounded-md bg-surface-container-low text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
                 >
                   <option value="bank_transfer">Bank Transfer</option>
                   <option value="rtgs">RTGS</option>
                   <option value="neft">NEFT</option>
                   <option value="upi">UPI</option>
                   <option value="cheque">Cheque</option>
-                </select>
+                </Select>
                 <Input
-                  label="Reference / UTR Number"
-                  placeholder="e.g. UTR123456"
+                  id="payment-reference"
+                  label="Reference Number"
                   value={referenceNumber}
                   onChange={(e) => setReferenceNumber(e.target.value)}
+                  placeholder="e.g. UTR1234567890"
                 />
-                <Button type="submit" variant="green" className="w-full" disabled={payLoading}>
-                  {payLoading ? 'Recording...' : 'Record Payment'}
+                <Button type="submit" disabled={payLoading} loading={payLoading} className="w-auto">
+                  Record Payment
                 </Button>
               </form>
-              {paymentError && (
-                <div className="p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm">
-                  <AlertCircle size={16} className="mr-2 text-error shrink-0" />
-                  {paymentError}
-                </div>
-              )}
-            </CardContent>
+            </div>
           </Card>
-
-          <div className="mt-space-md">
-            <Card>
-              <CardHeader>
-                <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Payment Options</h2>
-              </CardHeader>
-              <CardContent className="space-y-space-sm">
-                <div className="flex items-center gap-3 p-space-md rounded-lg border border-outline bg-surface-container-low">
-                  <CreditCard size={20} className="text-on-surface-variant" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-on-surface">Pay via Bank</p>
-                    <p className="text-xs text-on-surface-variant">Direct bank transfer from your registered account</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-space-md rounded-lg border border-outline bg-surface-container-low">
-                  <Mail size={20} className="text-on-surface-variant" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-on-surface">Generate Payment Advice</p>
-                    <p className="text-xs text-on-surface-variant">Send payment intimation to vendor via email</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
+
+      <Card flush>
+        <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+          <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Line Items</h2>
+        </div>
+        <div className="overflow-x-auto p-4">
+          <DataTable
+            columns={[
+              {
+                key: 'description',
+                label: 'DESCRIPTION',
+                render: (row) => <span className="text-[11px] font-medium leading-4 text-primary-text">{row.description}</span>,
+              },
+              { key: 'hsn_sac', label: 'HSN / SAC', render: (row) => <span className="text-[11px] leading-4 text-ink-3">{row.hsn_sac || '—'}</span> },
+              { key: 'qty', label: 'QTY', align: 'right', render: (row) => <span className="block text-right text-[11px] leading-4 text-ink-3 tnum">{row.quantity}</span> },
+              { key: 'rate', label: 'RATE', align: 'right', render: (row) => <span className="block text-right text-[11px] leading-4 text-ink-3 tnum">{formatMoneyIN(row.rate || 0)}</span> },
+              { key: 'gst_rate', label: 'GST %', align: 'right', render: (row) => <span className="block text-right text-[11px] leading-4 text-ink-3 tnum">{row.gst_rate || 0}%</span> },
+              { key: 'amount', label: 'AMOUNT', align: 'right', render: (row) => <span className="block text-right text-[11px] leading-4 text-primary-text tnum">{formatMoneyIN(row.total || 0)}</span> },
+            ]}
+            rows={(bill.items || []) as any[]}
+            emptyMessage="No line items."
+          />
+        </div>
+      </Card>
     </div>
   );
+}
+
+function formatMoneyIn(value: number | undefined | null): string {
+  return formatMoneyIN(Number(value || 0));
 }

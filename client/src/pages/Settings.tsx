@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { ElementType, FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import api, { authChangePassword, settingsGet } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Segmented } from '../components/ui/Segmented';
+import { Card } from '../components/ui/Card';
 import { Building, Mail, Shield, User } from 'lucide-react';
 
 interface CompanyForm {
@@ -26,12 +28,12 @@ interface NotificationOption {
   description: string;
 }
 
-const settingsTabs: Array<{ key: string; label: string; icon: ElementType }> = [
+const settingsTabs = [
   { key: 'profile', label: 'Company Profile', icon: Building },
   { key: 'account', label: 'Account Settings', icon: User },
   { key: 'security', label: 'Security & Roles', icon: Shield },
   { key: 'notifications', label: 'Notifications', icon: Mail },
-];
+] as const;
 
 const notificationOptions: NotificationOption[] = [
   {
@@ -102,7 +104,6 @@ export default function Settings() {
   const loadSettings = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const res = await settingsGet();
       const payload = res.data?.settings || {};
@@ -139,7 +140,6 @@ export default function Settings() {
     setSaving(true);
     setError(null);
     setMessage(null);
-
     try {
       const res = await api.put('/settings', { company: companyForm });
       setMessage(res.data?.message || 'Settings saved.');
@@ -155,14 +155,9 @@ export default function Settings() {
     setSaving(true);
     setError(null);
     setMessage(null);
-
     const preferences = Object.fromEntries(
-      notificationOptions.map((option) => [
-        option.apiKey,
-        String(notificationPreferences[option.key]),
-      ]),
+      notificationOptions.map((option) => [option.apiKey, String(notificationPreferences[option.key])]),
     );
-
     try {
       const res = await api.put('/settings', { preferences });
       setMessage(res.data?.message || 'Notification preferences saved.');
@@ -189,7 +184,6 @@ export default function Settings() {
     }
 
     setChangingPassword(true);
-
     try {
       const res = await authChangePassword({
         current_password: passwordForm.current_password,
@@ -206,229 +200,197 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="bg-surface-container-lowest border border-outline rounded-lg p-8 h-64 flex items-center justify-center animate-pulse">
-          <div className="text-on-surface-variant">Loading settings...</div>
-        </div>
+      <div className="px-4 py-5 lg:px-6">
+        <PageHeader title="Settings" description="Manage your FINZI AI workspace and preferences." />
+        <div className="h-64 shimmer rounded-xl border border-line mx-4 my-4" />
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
-        <div>
-          <h1 className="text-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">Settings</h1>
-          <p className="text-body-md text-body-md text-on-surface-variant">Manage your FINZI AI workspace and preferences.</p>
-        </div>
-      </div>
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title="Settings"
+        description="Manage your FINZI AI workspace and preferences."
+        actions={
+          <Segmented
+            options={settingsTabs.map((t) => ({ value: t.key, label: t.label }))}
+            value={activeTab}
+            onChange={setActiveTab}
+            ariaLabel="Settings tab"
+          />
+        }
+      />
 
       {error && (
-        <div className="mb-space-md p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm">
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
           {error}
         </div>
       )}
       {message && (
-        <div className="mb-space-md p-space-md rounded-md bg-green/10 border border-green text-on-surface text-sm">
+        <div className="rounded-xl border border-line bg-brand-soft px-4 py-3 text-sm text-brand-ink flex items-center gap-2">
           {message}
         </div>
       )}
 
-      <div className="flex flex-wrap gap-space-sm mb-space-md border-b border-outline">
-        {settingsTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key ? 'border-secondary text-secondary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
-          >
-            <tab.icon size={16} className="mr-2" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {activeTab === 'profile' && (
-        <Card>
-          <CardHeader>
-            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Company Profile</h2>
-          </CardHeader>
-          <CardContent className="space-y-space-md">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface" htmlFor="legal-name">Legal Name</label>
-                <Input
-                  id="legal-name"
-                  value={companyForm.legal_name}
-                  onChange={(event) => setCompanyForm((current) => ({ ...current, legal_name: event.target.value }))}
-                  placeholder="Enter company legal name"
-                />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface" htmlFor="trade-name">Trade Name</label>
-                <Input
-                  id="trade-name"
-                  value={companyForm.trade_name}
-                  onChange={(event) => setCompanyForm((current) => ({ ...current, trade_name: event.target.value }))}
-                  placeholder="Enter trade name"
-                />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface" htmlFor="gstin">GSTIN</label>
-                <Input
-                  id="gstin"
-                  value={companyForm.gstin}
-                  onChange={(event) => setCompanyForm((current) => ({ ...current, gstin: event.target.value }))}
-                  placeholder="22AAAAA0000A1Z5"
-                />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface" htmlFor="pan">PAN</label>
-                <Input
-                  id="pan"
-                  value={companyForm.pan}
-                  onChange={(event) => setCompanyForm((current) => ({ ...current, pan: event.target.value }))}
-                  placeholder="ABCDE1234F"
-                />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface" htmlFor="registered-email">Registered Email</label>
-                <Input id="registered-email" value={state.user?.email || ''} disabled />
-              </div>
-              <div className="space-y-space-sm">
-                <label className="text-sm font-medium text-on-surface" htmlFor="contact-phone">Contact Phone</label>
-                <Input
-                  id="contact-phone"
-                  value={companyForm.contact_phone}
-                  onChange={(event) => setCompanyForm((current) => ({ ...current, contact_phone: event.target.value }))}
-                  placeholder="+91 98765 43210"
-                />
-              </div>
+        <Card flush>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Company Profile</h2>
+          </div>
+          <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              id="legal-name"
+              label="Legal Name"
+              value={companyForm.legal_name}
+              onChange={(e) => setCompanyForm((c) => ({ ...c, legal_name: e.target.value }))}
+              placeholder="Enter company legal name"
+            />
+            <Input
+              id="trade-name"
+              label="Trade Name"
+              value={companyForm.trade_name}
+              onChange={(e) => setCompanyForm((c) => ({ ...c, trade_name: e.target.value }))}
+              placeholder="Enter trade name"
+            />
+            <Input
+              id="gstin"
+              label="GSTIN"
+              value={companyForm.gstin}
+              onChange={(e) => setCompanyForm((c) => ({ ...c, gstin: e.target.value }))}
+              hint="22AAAAA0000A1Z5"
+            />
+            <Input
+              id="pan"
+              label="PAN"
+              value={companyForm.pan}
+              onChange={(e) => setCompanyForm((c) => ({ ...c, pan: e.target.value }))}
+              hint="ABCDE1234F"
+            />
+            <Input
+              id="registered-email"
+              label="Registered Email"
+              value={state.user?.email || ''}
+              disabled
+            />
+            <Input
+              id="contact-phone"
+              label="Contact Phone"
+              value={companyForm.contact_phone}
+              onChange={(e) => setCompanyForm((c) => ({ ...c, contact_phone: e.target.value }))}
+              placeholder="+91 98765 43210"
+            />
+            <div className="md:col-span-2">
+              <Button variant="green" onClick={saveCompany} disabled={saving} className="w-auto">
+                {saving ? 'Saving…' : 'Save Changes'}
+              </Button>
             </div>
-            <Button variant="green" className="w-full" onClick={saveCompany} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {activeTab === 'account' && (
-        <Card>
-          <CardHeader>
-            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Account Settings</h2>
-          </CardHeader>
-          <CardContent className="space-y-space-md">
-            <div className="space-y-space-sm">
-              <label className="text-sm font-medium text-on-surface" htmlFor="full-name">Full Name</label>
-              <Input id="full-name" value={state.user?.full_name || ''} disabled />
-            </div>
-            <div className="space-y-space-sm">
-              <label className="text-sm font-medium text-on-surface" htmlFor="account-email">Email</label>
-              <Input id="account-email" value={state.user?.email || ''} type="email" disabled />
-            </div>
-            <div className="space-y-space-sm">
-              <label className="text-sm font-medium text-on-surface" htmlFor="account-role">Role</label>
-              <Input id="account-role" value={state.user?.role || 'Accountant'} disabled />
-            </div>
-            <p className="text-xs text-on-surface-variant">
+        <Card flush>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Account Settings</h2>
+          </div>
+          <div className="px-4 pb-4 space-y-4">
+            <Input id="full-name" label="Full Name" value={state.user?.full_name || ''} disabled />
+            <Input id="account-email" label="Email" type="email" value={state.user?.email || ''} disabled />
+            <Input id="account-role" label="Role" value={state.user?.role || 'Accountant'} disabled />
+            <p className="text-[10px] leading-4 text-ink-3">
               Identity and role fields are read-only here. Ask a workspace administrator to update access details.
             </p>
-          </CardContent>
+          </div>
         </Card>
       )}
 
       {activeTab === 'security' && (
-        <div className="space-y-space-md">
-          <Card>
-            <CardHeader>
-              <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Security & Roles</h2>
-            </CardHeader>
-            <CardContent className="space-y-space-md">
-              <div className="p-space-md rounded-lg border border-outline bg-surface-container-low">
-                <p className="text-sm font-medium text-on-surface">Two-Factor Authentication</p>
-                <p className="text-xs text-on-surface-variant mt-space-xs">
-                  Two-factor authentication is not available for this workspace.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+        <Card flush>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Security &amp; Roles</h2>
+          </div>
+          <div className="px-4 pb-4">
+            <div className="rounded-xl border border-line px-4 py-3">
+              <p className="text-[11px] font-medium leading-4 text-primary-text">Two-Factor Authentication</p>
+              <p className="mt-0.5 text-[10px] leading-3 text-ink-3">
+                Two-factor authentication is not available for this workspace.
+              </p>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Change Password</h2>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={changePassword} className="space-y-space-md">
-                <div className="space-y-space-sm">
-                  <label className="text-sm font-medium text-on-surface" htmlFor="current-password">Current Password</label>
+            <div className="mt-6 rounded-xl border border-line overflow-hidden">
+              <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+                <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Change Password</h2>
+              </div>
+              <div className="px-4 pb-4">
+                <form onSubmit={changePassword} className="space-y-3">
                   <Input
                     id="current-password"
+                    label="Current Password"
                     type="password"
                     autoComplete="current-password"
                     value={passwordForm.current_password}
-                    onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))}
+                    onChange={(e) => setPasswordForm((c) => ({ ...c, current_password: e.target.value }))}
                   />
-                </div>
-                <div className="space-y-space-sm">
-                  <label className="text-sm font-medium text-on-surface" htmlFor="new-password">New Password</label>
                   <Input
                     id="new-password"
+                    label="New Password"
                     type="password"
                     autoComplete="new-password"
                     value={passwordForm.new_password}
-                    onChange={(event) => setPasswordForm((current) => ({ ...current, new_password: event.target.value }))}
-                    helperText="Use at least 8 characters."
+                    onChange={(e) => setPasswordForm((c) => ({ ...c, new_password: e.target.value }))}
+                    hint="Use at least 8 characters."
                   />
-                </div>
-                <div className="space-y-space-sm">
-                  <label className="text-sm font-medium text-on-surface" htmlFor="confirm-password">Confirm New Password</label>
                   <Input
                     id="confirm-password"
+                    label="Confirm New Password"
                     type="password"
                     autoComplete="new-password"
                     value={passwordForm.confirm_password}
-                    onChange={(event) => setPasswordForm((current) => ({ ...current, confirm_password: event.target.value }))}
+                    onChange={(e) => setPasswordForm((c) => ({ ...c, confirm_password: e.target.value }))}
                   />
-                </div>
-                {passwordMessage && (
-                  <p className="text-sm text-green">{passwordMessage}</p>
-                )}
-                <Button type="submit" variant="green" disabled={changingPassword}>
-                  {changingPassword ? 'Updating...' : 'Change Password'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+                  {passwordMessage && (
+                    <p className="text-[10px] leading-4 text-brand-ink">{passwordMessage}</p>
+                  )}
+                  <Button type="submit" variant="green" disabled={changingPassword} className="w-auto">
+                    {changingPassword ? 'Updating…' : 'Change Password'}
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </Card>
       )}
 
       {activeTab === 'notifications' && (
-        <Card>
-          <CardHeader>
-            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Notification Preferences</h2>
-          </CardHeader>
-          <CardContent className="space-y-space-md">
+        <Card flush>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Notification Preferences</h2>
+          </div>
+          <div className="px-4 pb-4 divide-y divide-line">
             {notificationOptions.map((option) => (
-              <div key={option.key} className="flex items-center justify-between p-space-md rounded-lg border border-outline bg-surface-container-low">
+              <div key={option.key} className="flex items-center justify-between py-3">
                 <div>
-                  <p className="text-sm font-medium text-on-surface">{option.label}</p>
-                  <p className="text-xs text-on-surface-variant">{option.description}</p>
+                  <p className="text-[11px] font-medium leading-4 text-primary-text">{option.label}</p>
+                  <p className="mt-0.5 text-[10px] leading-3 text-ink-3">{option.description}</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={notificationPreferences[option.key]}
-                  onChange={(event) => setNotificationPreferences((current) => ({
-                    ...current,
-                    [option.key]: event.target.checked,
-                  }))}
-                  className="rounded border-border text-secondary focus:ring-secondary"
+                  onChange={(e) =>
+                    setNotificationPreferences((current) => ({ ...current, [option.key]: e.target.checked }))
+                  }
                   aria-label={option.label}
+                  className="shrink-0 rounded border border-line bg-surface text-brand focus:ring-2 focus:ring-brand focus:ring-offset-0 checked:bg-brand checked:border-brand transition-colors duration-micro"
                 />
               </div>
             ))}
-            <Button variant="green" className="w-full" onClick={saveNotificationPreferences} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Preferences'}
-            </Button>
-          </CardContent>
+            <div className="pt-4">
+              <Button variant="green" onClick={saveNotificationPreferences} disabled={saving} className="w-auto">
+                {saving ? 'Saving…' : 'Save Preferences'}
+              </Button>
+            </div>
+          </div>
         </Card>
       )}
     </div>

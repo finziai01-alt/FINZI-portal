@@ -1,33 +1,46 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import {
-  LayoutDashboard,
-  Building,
-  Users,
-  FileText,
-  CreditCard,
-  BookOpen,
   Banknote,
-  Shield,
+  BookOpen,
   Bot,
-  Settings,
+  Building2,
+  CheckSquare,
+  CreditCard,
+  FileText,
+  LayoutDashboard,
   LifeBuoy,
-  ChevronLeft,
+  ListChecks,
   LogOut,
-  FileCheck,
-  AlertTriangle,
-  Workflow,
-  ClipboardList,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Receipt,
   ScrollText,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  Users,
+  Workflow,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { remindersList } from '../../services/api';
+import { cn } from '../../utils/cn';
+import { Dropdown, type MenuItem } from '../ui/Dropdown';
+import { SectionLabel } from '../ui/Chip';
 
-const navItems = [
+interface NavItem {
+  label: string;
+  icon: React.ElementType;
+  path: string;
+  /** Optional count badge. Only used for counts that come from stored records. */
+  badge?: 'reminders';
+}
+
+const NAV_GROUPS: { group: string; items: NavItem[] }[] = [
   {
     group: 'Workspace',
     items: [
       { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-      { label: 'Companies', icon: Building, path: '/companies' },
+      { label: 'Companies', icon: Building2, path: '/companies' },
       { label: 'Clients', icon: Users, path: '/clients' },
     ],
   },
@@ -38,16 +51,16 @@ const navItems = [
       { label: 'Sales and invoices', icon: CreditCard, path: '/invoices' },
       { label: 'Ledger and accounts', icon: BookOpen, path: '/ledger' },
       { label: 'Banking', icon: Banknote, path: '/banking' },
-      { label: 'Tax and compliance', icon: FileCheck, path: '/tax' },
+      { label: 'Tax and compliance', icon: Receipt, path: '/tax' },
       { label: 'Financial reports', icon: ScrollText, path: '/reports' },
     ],
   },
   {
     group: 'Audit',
     items: [
-      { label: 'Audit workspace', icon: Shield, path: '/audit' },
-      { label: 'Evidence and papers', icon: ClipboardList, path: '/audit/evidence' },
-      { label: 'Working papers', icon: ScrollText, path: '/audit/working-papers' },
+      { label: 'Audit workspace', icon: ShieldCheck, path: '/audit' },
+      { label: 'Evidence and papers', icon: ListChecks, path: '/audit/evidence' },
+      { label: 'Working papers', icon: CheckSquare, path: '/audit/working-papers' },
     ],
   },
   {
@@ -55,102 +68,182 @@ const navItems = [
     items: [
       { label: 'FINZI AI', icon: Bot, path: '/ai' },
       { label: 'Automations', icon: Workflow, path: '/automations' },
-      { label: 'Reminders', icon: AlertTriangle, path: '/reminders' },
+      { label: 'Reminders', icon: ListChecks, path: '/reminders', badge: 'reminders' },
     ],
   },
 ];
+
+const WIDTH = 248;
+const COLLAPSED = 68;
 
 export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
   const { state, switchCompany, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [reminderCount, setReminderCount] = useState<number | null>(null);
 
   const isActive = (path: string) =>
     location.pathname === path || (path !== '/dashboard' && location.pathname.startsWith(path + '/'));
 
-  const handleSignOut = async () => {
-    await logout();
-    navigate('/login');
-  };
+  // The one badge in the rail, and it counts real open reminders.
+  useEffect(() => {
+    let alive = true;
+    remindersList({ status: 'pending', limit: 99 })
+      .then((res) => {
+        if (!alive) return;
+        const rows = res.data?.reminders || [];
+        setReminderCount(rows.length || null);
+      })
+      .catch(() => {
+        if (alive) setReminderCount(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [location.pathname]);
 
+  const companies = state.companies;
+  const current = companies.find((c) => c.id === state.company?.id);
   const userName = state.user?.full_name || state.user?.email || 'User';
-  const roleName = state.companies.find((c) => c.id === state.company?.id)?.role_name || 'Member';
+  const roleName = current?.role_name || 'Member';
+
+  const companyMenu: MenuItem[] = companies.map((company) => ({
+    label: company.legal_name,
+    description: company.gstin || 'GSTIN pending',
+    icon: company.id === state.company?.id ? Building2 : undefined,
+    onSelect: () => switchCompany(company.id),
+  }));
+
+  const accountMenu: MenuItem[] = [
+    { label: 'Profile and settings', icon: SettingsIcon, onSelect: () => navigate('/settings') },
+    { label: 'Help and support', icon: LifeBuoy, onSelect: () => navigate('/support') },
+    {
+      label: 'Sign out',
+      icon: LogOut,
+      destructive: true,
+      onSelect: async () => {
+        await logout();
+        navigate('/login');
+      },
+    },
+  ];
+
+  const badgeFor = (item: NavItem) =>
+    item.badge === 'reminders' && reminderCount ? reminderCount : null;
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-screen bg-primary-container text-inverse-on-surface z-50 flex flex-col transition-all duration-300 ${
-        collapsed ? 'w-[72px]' : 'w-[260px]'
-      }`}
+      data-shell="light"
+      style={{ width: collapsed ? COLLAPSED : WIDTH }}
+      className={cn(
+        'fixed left-0 top-0 z-40 flex h-screen flex-col bg-surface border-r border-line',
+        'transition-[width] duration-panel ease-swift'
+      )}
     >
-      <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 bg-secondary rounded-md flex items-center justify-center shrink-0">
-            <span className="text-on-secondary font-bold text-base">F</span>
-          </div>
+      {/* Brand row: the mark, then the single rail control. */}
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-line px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-brand text-[13px] font-bold leading-none text-on-secondary">
+            F
+          </span>
           {!collapsed && (
-            <div className="min-w-0">
-              <p className="text-sm font-bold tracking-tight text-white leading-tight">FINZI AI</p>
-              <p className="text-[10px] uppercase tracking-[0.14em] text-on-primary-container leading-tight">
-                Enterprise terminal
-              </p>
-            </div>
+            <span className="min-w-0">
+              <span className="block truncate text-[12.5px] font-semibold leading-4 text-primary-text">FINZI AI</span>
+              <span className="block text-[9.5px] uppercase leading-3 tracking-[0.062em] text-ink-4">
+                Practice workspace
+              </span>
+            </span>
           )}
         </div>
         <button
+          type="button"
           onClick={onToggle}
-          className="p-1.5 rounded text-on-primary-container hover:text-white hover:bg-white/10 transition-colors"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+          aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+          className="grid size-7 shrink-0 place-items-center rounded-lg text-ink-3 transition-colors duration-micro hover:bg-sub hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
         >
-          <ChevronLeft size={16} className={collapsed ? '' : 'rotate-180'} />
+          {collapsed ? <PanelLeftOpen aria-hidden="true" className="size-4" /> : <PanelLeftClose aria-hidden="true" className="size-4" />}
         </button>
       </div>
 
-      {!collapsed && state.companies.length > 0 && (
-        <div className="px-3 pt-3 shrink-0">
-          <label className="block text-[10px] uppercase tracking-[0.14em] text-on-primary-container font-semibold mb-1.5">
-            Company
-          </label>
-          <select
-            value={state.company?.id || ''}
-            onChange={(e) => switchCompany(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-secondary"
-          >
-            {state.companies.map((c) => (
-              <option key={c.id} value={c.id} className="text-on-surface">
-                {c.legal_name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1.5 font-code-mono text-code-mono text-on-primary-container truncate">
-            {state.company?.gstin || 'GSTIN pending'}
-          </p>
+      {/* Company switcher: a real menu, not a native select. */}
+      {!collapsed && companies.length > 1 && (
+        <div className="shrink-0 border-b border-line px-3 py-3">
+          <SectionLabel className="mb-1.5 px-1">Company</SectionLabel>
+          <Dropdown
+            align="start"
+            width="w-full"
+            panelTitle="Switch company"
+            items={companyMenu}
+            trigger={({ open, toggle, ref }) => (
+              <button
+                ref={ref}
+                type="button"
+                onClick={toggle}
+                aria-expanded={open}
+                aria-haspopup="menu"
+                className="flex w-full items-center gap-2 rounded-lg border border-line px-2.5 py-2 text-left transition-colors duration-micro hover:border-line-strong hover:bg-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              >
+                <span className="grid size-6 shrink-0 place-items-center rounded-md bg-sub text-[10px] font-bold text-ink-2">
+                  {(current?.legal_name || 'C').charAt(0)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12px] font-medium leading-4 text-primary-text">
+                    {current?.legal_name || 'Select company'}
+                  </span>
+                  <span className="block truncate font-mono text-[10px] leading-3 text-ink-3">
+                    {current?.gstin || 'GSTIN pending'}
+                  </span>
+                </span>
+                <svg viewBox="0 0 12 12" aria-hidden="true" className="size-3 shrink-0 text-ink-4">
+                  <path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          />
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3">
-        {navItems.map((group) => (
-          <div key={group.group} className="mb-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-on-primary-container font-semibold mb-1.5 px-3">
-              {group.group}
-            </p>
+      {/* Navigation: icon plus label, one row per destination, one wash for the active row. */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.group} className="mb-4 last:mb-0">
+            {!collapsed && <SectionLabel className="mb-1.5 px-2">{group.group}</SectionLabel>}
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const active = isActive(item.path);
                 const Icon = item.icon;
+                const count = badgeFor(item);
                 return (
                   <button
                     key={item.path}
+                    type="button"
                     onClick={() => navigate(item.path)}
                     title={collapsed ? item.label : undefined}
-                    className={`w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'group flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left',
+                      'transition-colors duration-micro ease-swift',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30',
                       active
-                        ? 'bg-secondary text-on-secondary font-semibold'
-                        : 'text-[#c7d2e6] hover:bg-white/5 hover:text-white'
-                    }`}
+                        ? 'bg-sub font-semibold text-primary-text'
+                        : 'font-medium text-ink-2 hover:bg-sub/60 hover:text-primary-text'
+                    )}
                   >
-                    <Icon size={16} className="shrink-0" />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
+                    <Icon
+                      aria-hidden="true"
+                      className={cn('size-4 shrink-0', active ? 'text-brand' : 'text-ink-3 group-hover:text-ink-2')}
+                    />
+                    {!collapsed && (
+                      <>
+                        <span className="min-w-0 flex-1 truncate text-[12px] leading-4">{item.label}</span>
+                        {count !== null && (
+                          <span className="shrink-0 rounded-md bg-sub px-1.5 py-0.5 text-[10px] font-semibold leading-none text-ink-2 tnum">
+                            {count}
+                          </span>
+                        )}
+                      </>
+                    )}
                   </button>
                 );
               })}
@@ -159,48 +252,49 @@ export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = (
         ))}
       </nav>
 
-      <div className="border-t border-white/10 p-3 shrink-0">
-        <button
-          onClick={() => navigate('/settings')}
-          className={`w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-[#c7d2e6] hover:bg-white/5 hover:text-white transition-colors ${
-            isActive('/settings') ? 'bg-secondary text-on-secondary font-semibold' : ''
-          }`}
-          title={collapsed ? 'Settings' : undefined}
-        >
-          <Settings size={16} className="shrink-0" />
-          {!collapsed && <span>Settings</span>}
-        </button>
-        <button
-          onClick={() => navigate('/support')}
-          className={`w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-[#c7d2e6] hover:bg-white/5 hover:text-white transition-colors ${
-            isActive('/support') ? 'bg-secondary text-on-secondary font-semibold' : ''
-          }`}
-          title={collapsed ? 'Help and support' : undefined}
-        >
-          <LifeBuoy size={16} className="shrink-0" />
-          {!collapsed && <span>Help and support</span>}
-        </button>
-
-        {!collapsed && (
-          <div className="mt-3 px-3 pt-3 border-t border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                {userName.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{userName}</p>
-                <p className="text-[11px] text-on-primary-container truncate">{roleName}</p>
-              </div>
+      {/* Footer: the signed-in member, with sign-out behind a menu. */}
+      <div className="shrink-0 border-t border-line p-3">
+        {collapsed ? (
+          <Dropdown
+            align="start"
+            items={accountMenu}
+            trigger={({ open, toggle, ref }) => (
               <button
-                onClick={handleSignOut}
-                className="p-1.5 rounded text-on-primary-container hover:text-white hover:bg-white/10 transition-colors"
-                title="Sign out"
-                aria-label="Sign out"
+                ref={ref}
+                type="button"
+                onClick={toggle}
+                aria-expanded={open}
+                aria-haspopup="menu"
+                title={`${userName} — ${roleName}`}
+                className="grid size-8 w-full place-items-center rounded-lg bg-sub text-[12px] font-bold text-ink-2 transition-colors hover:bg-sub-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
               >
-                <LogOut size={15} />
+                {userName.charAt(0).toUpperCase()}
               </button>
-            </div>
-          </div>
+            )}
+          />
+        ) : (
+          <Dropdown
+            align="start"
+            items={accountMenu}
+            trigger={({ open, toggle, ref }) => (
+              <button
+                ref={ref}
+                type="button"
+                onClick={toggle}
+                aria-expanded={open}
+                aria-haspopup="menu"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors duration-micro hover:bg-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+              >
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-sub text-[11px] font-bold text-ink-2">
+                  {userName.charAt(0).toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12px] font-semibold leading-4 text-primary-text">{userName}</span>
+                  <span className="block truncate text-[10px] leading-3 text-ink-3">{roleName}</span>
+                </span>
+              </button>
+            )}
+          />
         )}
       </div>
     </aside>

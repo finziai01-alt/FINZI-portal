@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import type { ElementType } from 'react';
 import {
   reportsBalanceSheet,
   reportsCashFlow,
@@ -7,16 +6,19 @@ import {
   reportsPL,
   reportsReceivablesAgeing,
 } from '../services/api';
-import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { PageHeader } from '../components/layout/PageHeader';
+import { StatCard } from '../components/ui/StatCard';
+import { Segmented } from '../components/ui/Segmented';
+import { DataTable, RowValue } from '../components/ui/DataTable';
+import { Card } from '../components/ui/Card';
 import { formatDateIN, formatMoneyIN } from '../utils/format';
-import { Activity, BarChart3, FileText, PieChart, TrendingUp } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 interface ReportDefinition {
   key: string;
   title: string;
   subtitle: string;
-  icon: ElementType;
   fetch: () => Promise<any>;
 }
 
@@ -25,35 +27,30 @@ const reportCards: ReportDefinition[] = [
     key: 'profit-loss',
     title: 'Profit & Loss',
     subtitle: 'Income and expenses over a period',
-    icon: BarChart3,
     fetch: reportsPL,
   },
   {
     key: 'balance-sheet',
     title: 'Balance Sheet',
     subtitle: 'Assets, liabilities and equity',
-    icon: FileText,
     fetch: reportsBalanceSheet,
   },
   {
     key: 'cash-flow',
     title: 'Cash Flow',
     subtitle: 'Cash inflows and outflows',
-    icon: Activity,
     fetch: reportsCashFlow,
   },
   {
     key: 'receivables-ageing',
     title: 'Receivables Ageing',
     subtitle: 'Customer outstanding by age bucket',
-    icon: TrendingUp,
     fetch: reportsReceivablesAgeing,
   },
   {
     key: 'payables-ageing',
     title: 'Payables Ageing',
     subtitle: 'Vendor outstanding by age bucket',
-    icon: PieChart,
     fetch: reportsPayablesAgeing,
   },
 ];
@@ -71,10 +68,7 @@ const escapeCsvCell = (value: unknown) => {
 };
 
 const filenamePart = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 export default function Reports() {
   const [selected, setSelected] = useState('profit-loss');
@@ -87,11 +81,9 @@ export default function Reports() {
   const loadReport = async (key: string) => {
     const report = reportCards.find((candidate) => candidate.key === key);
     if (!report) return;
-
     setLoading(true);
     setError(null);
     setReportData(null);
-
     try {
       const res = await report.fetch();
       setReportData(res.data);
@@ -108,21 +100,13 @@ export default function Reports() {
 
   const exportCsv = () => {
     if (!reportData || !selectedReport) return;
-
     const rows: string[][] = [['Section', 'Particulars', 'Value']];
-
     Object.entries(reportData.summary || {}).forEach(([key, value]) => {
       rows.push(['Summary', key.replace(/_/g, ' '), formatSummaryValue(key, value)]);
     });
-
     (reportData.items || []).forEach((item: any) => {
-      rows.push([
-        item.group || 'Items',
-        item.name || '',
-        formatMoneyIN(item.amount || 0),
-      ]);
+      rows.push([item.group || 'Items', item.name || '', formatMoneyIN(item.amount || 0)]);
     });
-
     const csv = rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n');
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -143,106 +127,90 @@ export default function Reports() {
   );
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
-        <div>
-          <h1 className="text-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">Financial Reports</h1>
-          <p className="text-body-md text-body-md text-on-surface-variant">Generate reports from actual stored accounting data.</p>
-        </div>
-        <div className="flex items-center gap-space-sm">
-          {reportData && (
-            <span className="text-xs text-on-surface-variant">Period: {periodLabel}</span>
-          )}
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!reportData || loading}>
-            Export CSV
-          </Button>
-        </div>
-      </div>
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title="Financial reports"
+        description="Generate reports from actual stored accounting data."
+        actions={
+          <>
+            <span className="text-[10px] font-semibold uppercase leading-3 tracking-[0.062em] text-ink-4 mr-3 hidden sm:inline-block">
+              Period: {periodLabel}
+            </span>
+            <Button variant="outline" onClick={exportCsv} disabled={!reportData || loading}>
+              {loading ? <span>Exporting…</span> : 'Export CSV'}
+            </Button>
+          </>
+        }
+        tabs={
+          <Segmented
+            options={reportCards.map((r) => ({ value: r.key, label: r.title }))}
+            value={selected}
+            onChange={(key) => {
+              setSelected(key);
+              loadReport(key);
+            }}
+            ariaLabel="Financial report"
+          />
+        }
+      />
 
       {error && (
-        <div className="mb-space-md p-space-md rounded-md bg-error-container/40 border border-error text-error text-sm">
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md mb-space-xl">
-        {reportCards.map((report) => (
-          <Card
-            key={report.key}
-            className={`cursor-pointer p-space-md hover:bg-surface-container-low transition-colors border ${selected === report.key ? 'border-secondary' : 'border-outline'}`}
-            onClick={() => {
-              setSelected(report.key);
-              loadReport(report.key);
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-on-surface">{report.title}</p>
-                <p className="text-xs text-on-surface-variant">{report.subtitle}</p>
-              </div>
-              <div className="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center text-on-surface-variant">
-                <report.icon size={16} />
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">
+      <Card flush>
+        <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
+          <div>
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">
               {selectedReport?.title || 'Financial Report'}
             </h2>
             {reportData?.generated_at && (
-              <span className="text-xs text-on-surface-variant">Generated {formatDateIN(reportData.generated_at)}</span>
+              <p className="mt-0.5 text-[10.5px] leading-4 text-ink-3">
+                Generated {formatDateIN(reportData.generated_at)}
+              </p>
             )}
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="h-64 flex items-center justify-center text-on-surface-variant animate-pulse">Loading report...</div>
-          ) : reportData ? (
-            <div className="space-y-space-md">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md mb-space-md">
-                {Object.entries(reportData.summary || {}).map(([key, value]: [string, unknown]) => (
-                  <div key={key} className="p-space-md rounded-lg border border-outline bg-surface-container-low">
-                    <p className="text-xs text-on-surface-variant">{key.replace(/_/g, ' ')}</p>
-                    <p className="text-lg font-bold text-on-surface tnum">{formatSummaryValue(key, value)}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-surface-container-low border-b border-outline">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-on-surface-variant">Group</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-on-surface-variant">Particulars</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-on-surface-variant">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(reportData.items || []).map((item: any, index: number) => (
-                      <tr key={`${item.name}-${index}`} className="border-b border-outline">
-                        <td className="px-4 py-3 text-on-surface-variant">{item.group || 'Items'}</td>
-                        <td className="px-4 py-3 text-on-surface">{item.name}</td>
-                        <td className="px-4 py-3 text-right text-on-surface tnum">{formatMoneyIN(item.amount || 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          <div className="text-right hidden sm:block">
+            <FileText size={14} className="text-ink-3" aria-hidden="true" />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="h-64 shimmer rounded-lg border border-line mx-4 my-4" />
+        ) : reportData ? (
+          <div className="px-4 pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.entries(reportData.summary || {}).map(([key, value]) => (
+                <StatCard
+                  key={key}
+                  title={key.replace(/_/g, ' ')}
+                  metrics={[{ label: 'Amount', value: formatSummaryValue(key, value) }]}
+                />
+              ))}
+            </div>
+            <div className="mt-6 overflow-x-auto">
+              <DataTable
+                columns={[
+                  { key: 'group', label: 'GROUP', render: (row) => <span>{row.group || 'Items'}</span> },
+                  { key: 'name', label: 'PARTICULARS', render: (row) => <span>{row.name || ''}</span> },
+                  { key: 'amount', label: 'AMOUNT', align: 'right', render: (row) => <RowValue value={formatMoneyIN(row.amount || 0)} tone="neutral" /> },
+                ]}
+                rows={(reportData.items || []) as any[]}
+                emptyMessage="No line items in this report."
+              />
               {reportData.note && (
-                <p className="text-xs text-on-surface-variant">{reportData.note}</p>
+                <p className="mt-4 text-[10px] leading-4 text-ink-3">{reportData.note}</p>
               )}
             </div>
-          ) : (
-            <div className="h-64 flex flex-col items-center justify-center text-on-surface-variant">
-              <FileText size={32} opacity={0.4} className="mb-2" />
-              <p>Select a report to view</p>
-            </div>
-          )}
-        </CardContent>
+          </div>
+        ) : (
+          <div className="p-12 text-center">
+            <FileText size={32} className="mx-auto mb-3 text-ink-4" aria-hidden="true" />
+            <p className="text-[11.5px] leading-4 text-ink-3">Select a report to view</p>
+          </div>
+        )}
       </Card>
     </div>
   );

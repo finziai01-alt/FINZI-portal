@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
   Building2,
@@ -17,6 +17,13 @@ import {
   companiesUpdate,
 } from '../services/api';
 import { formatDateIN } from '../utils/format';
+import { Button } from '../components/ui/Button';
+import { Input, Textarea } from '../components/ui/Input';
+import { StatusBadge } from '../components/ui/StatusBadge';
+import { PageHeader } from '../components/layout/PageHeader';
+import { DataTable, RowLabel } from '../components/ui/DataTable';
+import { Card } from '../components/ui/Card';
+import { cn } from '../utils/cn';
 
 interface CompanyMembership {
   id: string;
@@ -138,95 +145,6 @@ function companyActiveStatus(value?: number | boolean | null): string {
   return 'Unknown';
 }
 
-function statusClass(status: string): string {
-  const normalized = status.toLowerCase();
-  if (normalized === 'active' || normalized === 'approved' || normalized === 'enabled') {
-    return 'bg-secondary-container/40 text-secondary font-semibold';
-  }
-  if (normalized === 'inactive' || normalized === 'pending' || normalized === 'invited') {
-    return 'bg-warning/10 text-warning font-semibold';
-  }
-  if (normalized === 'rejected' || normalized === 'suspended') {
-    return 'bg-error-container/50 text-error font-semibold';
-  }
-  return 'bg-surface-container text-on-surface-variant';
-}
-
-interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  error?: string;
-  required?: boolean;
-}
-
-function TextField({ id, label, value, onChange, error, required, className = '', ...props }: TextFieldProps) {
-  const errorId = error ? `${id}-error` : undefined;
-
-  return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="block text-label-md text-label-md font-semibold text-on-surface">
-        {label}
-        {required && <span className="ml-1 text-error" aria-hidden="true">*</span>}
-      </label>
-      <input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-invalid={Boolean(error)}
-        aria-describedby={errorId}
-        className={`input-field text-body-md text-body-md ${
-          error ? 'border-error focus:ring-error' : ''
-        } ${className}`}
-        {...props}
-      />
-      {error && (
-        <p id={errorId} className="text-xs text-error">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-interface TextAreaFieldProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value'> {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}
-
-function TextAreaField({ id, label, value, onChange, className = '', ...props }: TextAreaFieldProps) {
-  return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="block text-label-md text-label-md font-semibold text-on-surface">
-        {label}
-      </label>
-      <textarea
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`input-field min-h-24 resize-y text-body-md text-body-md ${className}`}
-        {...props}
-      />
-    </div>
-  );
-}
-
-function DetailItem({ label, value, mono = false }: { label: string; value?: string | number | null; mono?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-label-sm text-label-sm font-semibold uppercase tracking-wide text-on-surface-variant">
-        {label}
-      </dt>
-      <dd className={`mt-1 break-words text-body-md text-body-md text-on-surface ${mono ? 'font-code-mono text-code-mono' : ''}`}>
-        {valueOrDash(value)}
-      </dd>
-    </div>
-  );
-}
-
 export default function Companies() {
   const [companies, setCompanies] = useState<CompanyMembership[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,11 +183,9 @@ export default function Companies() {
 
   useEffect(() => {
     if (!selectedCompanyId) return undefined;
-
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setSelectedCompanyId(null);
     };
-
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [selectedCompanyId]);
@@ -373,39 +289,34 @@ export default function Companies() {
   };
 
   return (
-    <div className="p-6 space-y-space-md">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-space-md">
-        <div>
-          <h1 className="text-headline-lg text-headline-lg font-bold tracking-tight text-on-surface">Companies</h1>
-          <p className="mt-space-2xs text-body-md text-body-md text-on-surface-variant">
-            Manage the companies you are a member of and update their registration details.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setShowCreateForm((current) => !current);
-            setCreateError('');
-          }}
-          className="inline-flex h-10 items-center justify-center gap-space-xs rounded-md bg-secondary px-space-md text-label-md text-label-md font-semibold text-on-secondary shadow-sm transition-colors hover:bg-on-secondary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary disabled:cursor-not-allowed disabled:opacity-60"
-          aria-expanded={showCreateForm}
-          aria-controls="company-create-form"
-        >
-          {showCreateForm ? <X size={15} /> : <Plus size={15} />}
-          {showCreateForm ? 'Cancel' : 'Add company'}
-        </button>
-      </div>
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title="Companies"
+        description="Manage the companies you are a member of and update their registration details."
+        actions={
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowCreateForm((current) => !current);
+              setCreateError('');
+            }}
+            aria-expanded={showCreateForm}
+            aria-controls="company-create-form"
+          >
+            {showCreateForm ? <X size={16} /> : <Plus size={16} />}
+            {showCreateForm ? 'Cancel' : 'Add company'}
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="flex flex-col gap-space-sm rounded-lg border border-error bg-error-container/40 px-space-md py-space-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-space-sm text-body-md text-body-md text-error">
-            <AlertCircle size={16} className="mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </div>
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink flex items-center gap-2">
+          <AlertCircle size={16} className="shrink-0" />
+          <span>{error}</span>
           <button
             type="button"
             onClick={() => void loadCompanies()}
-            className="inline-flex items-center gap-space-xs self-start text-label-md text-label-md font-semibold text-error underline underline-offset-2 sm:self-auto"
+            className="ml-auto text-[11px] font-medium underline underline-offset-2"
           >
             <RefreshCw size={13} /> Retry
           </button>
@@ -413,325 +324,308 @@ export default function Companies() {
       )}
 
       {success && (
-        <div className="flex items-center gap-space-sm rounded-lg border border-secondary bg-secondary-container/30 px-space-md py-space-sm text-body-md text-body-md text-secondary">
+        <div className="rounded-xl border border-line bg-brand-soft px-4 py-3 text-sm text-brand-ink flex items-center gap-2">
           <CheckCircle2 size={16} className="shrink-0" />
           <span>{success}</span>
         </div>
       )}
 
       {showCreateForm && (
-        <section
-          id="company-create-form"
-          aria-labelledby="company-create-heading"
-          className="rounded-lg border border-outline bg-surface-container-lowest shadow-sm"
-        >
-          <div className="flex items-center justify-between gap-space-md border-b border-outline px-space-md py-space-sm">
+        <Card flush className="space-y-1">
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
             <div>
-              <h2 id="company-create-heading" className="text-headline-sm text-headline-sm font-bold text-on-surface">
-                Add company
-              </h2>
-              <p className="text-xs text-on-surface-variant">Enter the legal and registration details for the new company.</p>
+              <h2 className="text-[12.5px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Add company</h2>
+              <p className="mt-0.5 text-[10.5px] leading-4 text-ink-3">
+                Enter the legal and registration details for the new company.
+              </p>
             </div>
-            <Building2 size={18} className="shrink-0 text-secondary" />
+            <Building2 size={18} className="shrink-0 text-brand" />
           </div>
-          <form onSubmit={handleCreate} noValidate>
-            <div className="grid grid-cols-1 gap-space-md p-space-md md:grid-cols-2 xl:grid-cols-3">
-              <TextField
+          <form onSubmit={handleCreate} noValidate className="p-4 pb-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <Input
                 id="company-legal-name"
                 label="Legal name"
                 value={createForm.legal_name}
-                onChange={(value) => updateCreateField('legal_name', value)}
+                onChange={(e) => updateCreateField('legal_name', e.target.value)}
                 error={createError}
                 required
                 autoComplete="organization"
               />
-              <TextField
+              <Input
                 id="company-trade-name"
                 label="Trade name"
                 value={createForm.trade_name}
-                onChange={(value) => updateCreateField('trade_name', value)}
+                onChange={(e) => updateCreateField('trade_name', e.target.value)}
               />
-              <TextField
+              <Input
                 id="company-business-type"
                 label="Business type"
                 value={createForm.business_type}
-                onChange={(value) => updateCreateField('business_type', value)}
+                onChange={(e) => updateCreateField('business_type', e.target.value)}
               />
-              <TextField
+              <Input
                 id="company-pan"
                 label="PAN"
                 value={createForm.pan}
-                onChange={(value) => updateCreateField('pan', value)}
-                className="font-code-mono text-code-mono"
+                onChange={(e) => updateCreateField('pan', e.target.value)}
+                hint="Permanent Account Number"
               />
-              <TextField
+              <Input
                 id="company-gstin"
                 label="GSTIN"
                 value={createForm.gstin}
-                onChange={(value) => updateCreateField('gstin', value)}
-                className="font-code-mono text-code-mono"
+                onChange={(e) => updateCreateField('gstin', e.target.value)}
+                hint="Goods and Services Tax Identification Number"
               />
-              <TextField
+              <Input
                 id="company-tan"
                 label="TAN"
                 value={createForm.tan}
-                onChange={(value) => updateCreateField('tan', value)}
-                className="font-code-mono text-code-mono"
+                onChange={(e) => updateCreateField('tan', e.target.value)}
+                hint="Tax Deduction and Collection Account Number"
               />
               <div className="md:col-span-2 xl:col-span-3">
-                <TextAreaField
+                <Textarea
                   id="company-registered-address"
                   label="Registered address"
                   value={createForm.registered_address}
-                  onChange={(value) => updateCreateField('registered_address', value)}
+                  onChange={(e) => updateCreateField('registered_address', e.target.value)}
+                  rows={3}
                 />
               </div>
-              <TextField
+              <Input
                 id="company-state"
                 label="State"
                 value={createForm.state}
-                onChange={(value) => updateCreateField('state', value)}
+                onChange={(e) => updateCreateField('state', e.target.value)}
               />
-              <TextField
+              <Input
                 id="company-city"
                 label="City"
                 value={createForm.city}
-                onChange={(value) => updateCreateField('city', value)}
+                onChange={(e) => updateCreateField('city', e.target.value)}
               />
-              <TextField
+              <Input
                 id="company-pincode"
                 label="Pincode"
                 value={createForm.pincode}
-                onChange={(value) => updateCreateField('pincode', value)}
+                onChange={(e) => updateCreateField('pincode', e.target.value)}
                 inputMode="numeric"
               />
-              <TextField
+              <Input
                 id="company-contact-email"
                 label="Contact email"
                 type="email"
                 value={createForm.contact_email}
-                onChange={(value) => updateCreateField('contact_email', value)}
+                onChange={(e) => updateCreateField('contact_email', e.target.value)}
                 autoComplete="email"
               />
-              <TextField
+              <Input
                 id="company-contact-phone"
                 label="Contact phone"
                 type="tel"
                 value={createForm.contact_phone}
-                onChange={(value) => updateCreateField('contact_phone', value)}
+                onChange={(e) => updateCreateField('contact_phone', e.target.value)}
                 autoComplete="tel"
               />
-              <TextField
+              <Input
                 id="company-financial-year-start"
                 label="Financial year start"
                 type="date"
                 value={createForm.financial_year_start}
-                onChange={(value) => updateCreateField('financial_year_start', value)}
+                onChange={(e) => updateCreateField('financial_year_start', e.target.value)}
               />
-              <TextField
+              <Input
                 id="company-financial-year-end"
                 label="Financial year end"
                 type="date"
                 value={createForm.financial_year_end}
-                onChange={(value) => updateCreateField('financial_year_end', value)}
+                onChange={(e) => updateCreateField('financial_year_end', e.target.value)}
               />
             </div>
-            <div className="flex flex-col-reverse gap-space-sm border-t border-outline bg-surface-container-low/50 px-space-md py-space-sm sm:flex-row sm:items-center sm:justify-end">
+            <div className="flex flex-col-reverse gap-2 border-t border-line px-4 py-3 sm:flex-row sm:items-end sm:justify-end">
               <button
                 type="button"
                 onClick={() => {
                   setShowCreateForm(false);
                   setCreateError('');
                 }}
-                className="inline-flex h-10 items-center justify-center rounded-md border border-outline bg-surface-container-lowest px-space-md text-label-md text-label-md font-semibold text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-line px-3 text-[12px] font-medium text-primary-text transition-colors duration-micro hover:bg-sub focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
               >
                 Cancel
               </button>
-              <button
+              <Button
                 type="submit"
                 disabled={creating}
-                className="inline-flex h-10 items-center justify-center gap-space-xs rounded-md bg-secondary px-space-md text-label-md text-label-md font-semibold text-on-secondary shadow-sm transition-colors hover:bg-on-secondary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                className="ml-auto"
               >
-                {creating ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+                {creating ? <Loader2 size={16} className="animate-spin-slow opacity-80" /> : <Plus size={16} />}
                 {creating ? 'Adding company' : 'Add company'}
-              </button>
+              </Button>
             </div>
           </form>
-        </section>
+        </Card>
       )}
 
       {loading ? (
-        <div className="space-y-space-sm" aria-label="Loading companies" aria-busy="true">
-          <div className="h-11 animate-pulse rounded-lg border border-outline bg-surface-container-lowest" />
-          <div className="h-11 animate-pulse rounded-lg border border-outline bg-surface-container-lowest" />
-          <div className="h-11 animate-pulse rounded-lg border border-outline bg-surface-container-lowest" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3" aria-label="Loading companies" aria-busy="true">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-11 shimmer rounded-lg border border-line" />
+          ))}
         </div>
       ) : companies.length === 0 ? (
-        <section className="rounded-lg border border-outline bg-surface-container-lowest px-space-lg py-space-xl text-center shadow-sm">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-surface-container text-secondary">
+        <Card flush className="text-center py-16">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-sub text-ink-3">
             <Building2 size={20} />
           </div>
-          <h2 className="mt-space-md text-headline-sm text-headline-sm font-bold text-on-surface">No companies yet</h2>
-          <p className="mx-auto mt-space-2xs max-w-md text-body-md text-body-md text-on-surface-variant">
+          <h2 className="mt-4 text-[12.5px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">No companies yet</h2>
+          <p className="mt-1 max-w-[45ch] mx-auto text-[11.5px] leading-4 text-ink-3">
             Add a company to start managing its financial workspace.
           </p>
           {!showCreateForm && (
-            <button
-              type="button"
-              onClick={() => setShowCreateForm(true)}
-              className="mt-space-md inline-flex h-10 items-center justify-center gap-space-xs rounded-md bg-secondary px-space-md text-label-md text-label-md font-semibold text-on-secondary shadow-sm transition-colors hover:bg-on-secondary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
-            >
-              <Plus size={15} /> Add company
-            </button>
+            <div className="mt-4">
+              <Button variant="outline" onClick={() => setShowCreateForm(true)}>
+                <Plus size={16} /> Add company
+              </Button>
+            </div>
           )}
-        </section>
+        </Card>
       ) : (
-        <section className="overflow-hidden rounded-lg border border-outline bg-surface-container-lowest shadow-sm">
-          <div className="flex items-center justify-between gap-space-md border-b border-outline px-space-md py-space-sm">
+        <Card flush>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2 border-b border-line">
             <div>
-              <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface">Company directory</h2>
-              <p className="text-xs text-on-surface-variant">{companies.length} {companies.length === 1 ? 'company' : 'companies'}</p>
+              <h2 className="text-[12.5px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">
+                Company directory
+              </h2>
+              <p className="mt-0.5 text-[10.5px] leading-4 text-ink-3">
+                {companies.length} {companies.length === 1 ? 'company' : 'companies'}
+              </p>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left">
-              <thead>
-                <tr className="bg-surface-container-low">
-                  <th scope="col" className="table-header">Company</th>
-                  <th scope="col" className="table-header">GSTIN</th>
-                  <th scope="col" className="table-header">PAN</th>
-                  <th scope="col" className="table-header">City / State</th>
-                  <th scope="col" className="table-header">Role</th>
-                  <th scope="col" className="table-header">Created</th>
-                  <th scope="col" className="table-header">Status</th>
-                  <th scope="col" className="table-header text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companies.map((company) => {
-                  const status = companyStatus(company);
-                  return (
-                    <tr key={company.id} className="transition-colors hover:bg-surface-container-low/60">
-                      <td className="table-cell">
-                        <div className="flex items-center gap-space-sm">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-container text-label-sm text-label-sm font-bold text-on-secondary">
-                            {(company.legal_name || '?').trim().charAt(0).toUpperCase()}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate text-label-md text-label-md font-semibold text-on-surface">{company.legal_name}</p>
-                            {company.trade_name && (
-                              <p className="truncate text-xs text-on-surface-variant">{company.trade_name}</p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="table-cell font-code-mono text-code-mono">{valueOrDash(company.gstin)}</td>
-                      <td className="table-cell font-code-mono text-code-mono">{valueOrDash(company.pan)}</td>
-                      <td className="table-cell text-body-md text-body-md text-on-surface-variant">
-                        {[company.city, company.state].filter(Boolean).join(', ') || '—'}
-                      </td>
-                      <td className="table-cell text-body-md text-body-md text-on-surface-variant">{valueOrDash(company.role_name)}</td>
-                      <td className="table-cell text-body-md text-body-md text-on-surface-variant tnum">
-                        {company.created_at ? formatDateIN(company.created_at) : '—'}
-                      </td>
-                      <td className="table-cell">
-                        <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium capitalize ${statusClass(status)}`}>
-                          {status}
-                        </span>
-                      </td>
-                      <td className="table-cell text-right">
-                        <button
-                          type="button"
-                          onClick={() => void openDetails(company.company_id)}
-                          className="inline-flex items-center gap-space-xs rounded-md px-space-sm py-space-xs text-label-sm text-label-sm font-semibold text-secondary transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
-                        >
-                          Open details <ChevronRight size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="overflow-x-auto p-4">
+            <DataTable
+              columns={[
+                {
+                  key: 'company',
+                  label: 'COMPANY',
+                  render: (row) => (
+                    <RowLabel
+                      title={row.legal_name}
+                      meta={row.trade_name || `${row.city || ''}${row.state ? ', ' + row.state : ''}` || '—'}
+                    />
+                  ),
+                },
+                { key: 'gstin', label: 'GSTIN', render: (row) => <RowValueCell value={valueOrDash(row.gstin)} mono /> },
+                { key: 'pan', label: 'PAN', render: (row) => <RowValueCell value={valueOrDash(row.pan)} mono /> },
+                { key: 'role', label: 'ROLE', render: (row) => <RowValueCell value={valueOrDash(row.role_name)} /> },
+                { key: 'created', label: 'CREATED', align: 'right', render: (row) => <RowValueCell value={valueOrDash(formatDateIN(row.created_at ?? ''))} /> },
+                {
+                  key: 'status',
+                  label: 'STATUS',
+                  align: 'right',
+                  render: (row) => <StatusBadge status={companyStatus(row)} />,
+                },
+                {
+                  key: 'action',
+                  label: '',
+                  align: 'right',
+                  render: (row) => (
+                    <button
+                      type="button"
+                      onClick={() => void openDetails(row.company_id)}
+                      title={`Open details for ${row.legal_name}`}
+                      aria-label={`Open details for ${row.legal_name}`}
+                      className="p-1.5 rounded-lg text-on-surface-variant hover:bg-sub hover:text-primary-text transition-colors duration-micro"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  ),
+                },
+              ]}
+              rows={companies}
+              emptyMessage="No companies found"
+            />
           </div>
-        </section>
+        </Card>
       )}
 
       {selectedCompanyId && (
         <div className="fixed inset-0 z-50 flex justify-end" role="presentation">
           <button
             type="button"
-            className="absolute inset-0 bg-primary/40"
+            className="absolute inset-0 bg-ink/20 backdrop-blur-[2px]"
             onClick={() => setSelectedCompanyId(null)}
             aria-label="Close company details"
+            tabIndex={-1}
           />
           <aside
             role="dialog"
             aria-modal="true"
             aria-labelledby="company-detail-heading"
-            className="relative flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-outline bg-background shadow-xl"
+            className="relative flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-line bg-surface shadow-pop"
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between gap-space-md border-b border-outline bg-surface-container-lowest px-space-md py-space-sm">
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-line px-4 py-3">
               <div>
-                <p className="text-label-sm text-label-sm font-semibold uppercase tracking-wide text-secondary">Company details</p>
-                <h2 id="company-detail-heading" className="text-headline-sm text-headline-sm font-bold text-on-surface">
+                <p className="text-[9.5px] font-semibold uppercase leading-3 tracking-[0.062em] text-ink-4">Company details</p>
+                <h2 id="company-detail-heading" className="text-[12.5px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">
                   {detail?.legal_name || 'Open company'}
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedCompanyId(null)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-on-surface-variant transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
+                className="grid size-8 place-items-center rounded-lg text-ink-3 transition-colors duration-micro hover:bg-sub hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
                 aria-label="Close company details"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
             {detailLoading ? (
-              <div className="space-y-space-sm p-space-md" aria-label="Loading company details" aria-busy="true">
-                <div className="h-20 animate-pulse rounded-lg border border-outline bg-surface-container-lowest" />
-                <div className="h-64 animate-pulse rounded-lg border border-outline bg-surface-container-lowest" />
+              <div className="space-y-3 p-4" aria-label="Loading company details" aria-busy="true">
+                <div className="h-24 shimmer rounded-lg border border-line" />
+                <div className="h-64 shimmer rounded-lg border border-line" />
               </div>
             ) : detailError ? (
-              <div className="m-space-md rounded-lg border border-error bg-error-container/40 p-space-md">
-                <div className="flex items-start gap-space-sm text-body-md text-body-md text-error">
-                  <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                  <span>{detailError}</span>
-                </div>
+              <div className="rounded-xl border border-line bg-neg-soft p-4 text-sm text-danger-ink flex items-center gap-2">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{detailError}</span>
                 <button
                   type="button"
                   onClick={() => void openDetails(selectedCompanyId)}
-                  className="mt-space-md inline-flex items-center gap-space-xs text-label-md text-label-md font-semibold text-error underline underline-offset-2"
+                  className="ml-auto text-[11px] font-medium underline underline-offset-2"
                 >
                   <RefreshCw size={13} /> Try again
                 </button>
               </div>
             ) : detail ? (
-              <div className="space-y-space-md p-space-md">
-                <section className="rounded-lg border border-outline bg-surface-container-lowest p-space-md shadow-sm">
-                  <div className="flex items-start gap-space-md">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-container text-headline-sm text-headline-sm font-bold text-on-secondary">
+              <div className="space-y-4 p-4">
+                <section className="rounded-xl border border-line overflow-hidden">
+                  <div className="flex items-start gap-3 px-4 py-3.5">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand text-[14px] font-bold leading-none text-on-secondary">
                       {detail.legal_name.trim().charAt(0).toUpperCase()}
                     </span>
                     <div className="min-w-0">
-                      <h3 className="text-headline-sm text-headline-sm font-bold text-on-surface">{detail.legal_name}</h3>
-                      <p className="mt-space-2xs text-body-md text-body-md text-on-surface-variant">
+                      <h3 className="text-[12.5px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">
+                        {detail.legal_name}
+                      </h3>
+                      <p className="mt-0.5 text-[10.5px] leading-4 text-ink-3">
                         {valueOrDash(detail.business_type)}
                       </p>
                     </div>
                   </div>
-                  <dl className="mt-space-md grid grid-cols-1 gap-space-md border-t border-outline pt-space-md sm:grid-cols-2">
-                    <DetailItem label="Company ID" value={detail.id} mono />
-                    <DetailItem label="Status" value={companyActiveStatus(detail.is_active)} />
-                    <DetailItem label="Trade name" value={detail.trade_name} />
-                    <DetailItem label="PAN" value={detail.pan} mono />
-                    <DetailItem label="GSTIN" value={detail.gstin} mono />
-                    <DetailItem label="TAN" value={detail.tan} mono />
-                    <DetailItem label="State" value={detail.state} />
-                    <DetailItem label="City" value={detail.city} />
-                    <DetailItem label="Pincode" value={detail.pincode} />
-                    <DetailItem
+                  <dl className="divide-y divide-line grid grid-cols-1 gap-3 border-t border-line pt-3 sm:grid-cols-2 px-4 pb-3.5">
+                    <DetailView label="Company ID" value={detail.id} mono />
+                    <DetailView label="Status" value={companyActiveStatus(detail.is_active)} />
+                    <DetailView label="Trade name" value={detail.trade_name} />
+                    <DetailView label="PAN" value={detail.pan} mono />
+                    <DetailView label="GSTIN" value={detail.gstin} mono />
+                    <DetailView label="TAN" value={detail.tan} mono />
+                    <DetailView label="State" value={detail.state} />
+                    <DetailView label="City" value={detail.city} />
+                    <DetailView label="Pincode" value={detail.pincode} />
+                    <DetailView
                       label="Financial year"
                       value={
                         detail.financial_year_start && detail.financial_year_end
@@ -740,70 +634,68 @@ export default function Companies() {
                       }
                     />
                     <div className="sm:col-span-2">
-                      <DetailItem label="Registered address" value={detail.registered_address} />
+                      <DetailView label="Registered address" value={detail.registered_address} />
                     </div>
-                    <DetailItem label="Created" value={detail.created_at ? formatDateIN(detail.created_at) : null} />
-                    <DetailItem label="Updated" value={detail.updated_at ? formatDateIN(detail.updated_at) : null} />
+                    <DetailView label="Created" value={detail.created_at ? formatDateIN(detail.created_at) : null} />
+                    <DetailView label="Updated" value={detail.updated_at ? formatDateIN(detail.updated_at) : null} />
                   </dl>
                 </section>
 
-                <section className="rounded-lg border border-outline bg-surface-container-lowest p-space-md shadow-sm">
-                  <div className="mb-space-md">
-                    <h3 className="text-headline-sm text-headline-sm font-bold text-on-surface">Editable details</h3>
-                    <p className="mt-space-2xs text-xs text-on-surface-variant">Update the company trade name, tax identifiers and contact details.</p>
+                <section className="rounded-xl border border-line overflow-hidden">
+                  <div className="px-4 py-3.5 border-b border-line">
+                    <h3 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Editable details</h3>
+                    <p className="mt-0.5 text-[10.5px] leading-4 text-ink-3">
+                      Update the company trade name, tax identifiers and contact details.
+                    </p>
                   </div>
-                  <form onSubmit={handleUpdate} noValidate className="space-y-space-md">
-                    <TextField
+                  <form onSubmit={handleUpdate} noValidate className="px-4 pb-4 space-y-3">
+                    <Input
                       id="detail-trade-name"
                       label="Trade name"
                       value={editForm.trade_name}
-                      onChange={(value) => updateEditField('trade_name', value)}
+                      onChange={(e) => updateEditField('trade_name', e.target.value)}
                     />
-                    <TextField
+                    <Input
                       id="detail-pan"
                       label="PAN"
                       value={editForm.pan}
-                      onChange={(value) => updateEditField('pan', value)}
-                      className="font-code-mono text-code-mono"
+                      onChange={(e) => updateEditField('pan', e.target.value)}
+                      hint="Permanent Account Number"
                     />
-                    <TextField
+                    <Input
                       id="detail-gstin"
                       label="GSTIN"
                       value={editForm.gstin}
-                      onChange={(value) => updateEditField('gstin', value)}
-                      className="font-code-mono text-code-mono"
+                      onChange={(e) => updateEditField('gstin', e.target.value)}
+                      hint="Goods and Services Tax Identification Number"
                     />
-                    <TextField
+                    <Input
                       id="detail-contact-email"
                       label="Contact email"
                       type="email"
                       value={editForm.contact_email}
-                      onChange={(value) => updateEditField('contact_email', value)}
+                      onChange={(e) => updateEditField('contact_email', e.target.value)}
                       autoComplete="email"
                     />
-                    <TextField
+                    <Input
                       id="detail-contact-phone"
                       label="Contact phone"
                       type="tel"
                       value={editForm.contact_phone}
-                      onChange={(value) => updateEditField('contact_phone', value)}
+                      onChange={(e) => updateEditField('contact_phone', e.target.value)}
                       autoComplete="tel"
                     />
                     {saveError && (
-                      <div className="flex items-start gap-space-sm rounded-md bg-error-container/40 px-space-sm py-space-sm text-body-sm text-body-sm text-error">
-                        <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                      <div className="rounded-lg border border-line bg-neg-soft px-3 py-2 text-sm text-danger-ink flex items-start gap-2">
+                        <AlertCircle size={14} className="mt-0.5 shrink-0" />
                         <span>{saveError}</span>
                       </div>
                     )}
-                    <div className="flex justify-end border-t border-outline pt-space-md">
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="inline-flex h-10 items-center justify-center gap-space-xs rounded-md bg-secondary px-space-md text-label-md text-label-md font-semibold text-on-secondary shadow-sm transition-colors hover:bg-on-secondary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                    <div className="flex justify-end border-t border-line pt-3">
+                      <Button type="submit" disabled={saving}>
+                        {saving ? <Loader2 size={16} className="animate-spin-slow opacity-80" /> : <Save size={16} />}
                         {saving ? 'Saving changes' : 'Save changes'}
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 </section>
@@ -812,6 +704,27 @@ export default function Companies() {
           </aside>
         </div>
       )}
+    </div>
+  );
+}
+
+function RowValueCell({ value, mono }: { value: string; mono?: boolean }) {
+  return (
+    <span className={cn('block text-right', mono ? 'font-code-mono text-code-mono' : '')}>
+      {value}
+    </span>
+  );
+}
+
+function DetailView({ label, value, mono }: { label: string; value?: string | number | null; mono?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[9.5px] font-semibold uppercase leading-3 tracking-[0.062em] text-ink-4">
+        {label}
+      </dt>
+      <dd className={`mt-0.5 break-words text-[11.5px] leading-4 text-primary-text ${mono ? 'font-code-mono text-code-mono' : ''}`}>
+        {valueOrDash(value)}
+      </dd>
     </div>
   );
 }

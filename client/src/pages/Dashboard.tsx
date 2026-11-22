@@ -1,8 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Line,
   LineChart,
@@ -13,36 +11,14 @@ import {
 } from 'recharts';
 import { dashboardSummary } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { StatusBadge } from '../components/ui/StatusBadge';
 import { formatMoneyIN, formatDateIN } from '../utils/format';
-import {
-  Banknote,
-  ChevronDown,
-  CreditCard,
-  Download,
-  FileText,
-  Plus,
-  Receipt,
-  TrendingUp,
-} from 'lucide-react';
-
-const KPI_ICONS: Record<string, React.ElementType> = {
-  'Total receivables': CreditCard,
-  'Total payables': Receipt,
-  'Cash and bank balance': Banknote,
-  'Total revenue': TrendingUp,
-  'Total expenses': FileText,
-  'Net profit': TrendingUp,
-};
-
-const KPI_SERIES: Record<string, 'revenue' | 'expenses' | 'net'> = {
-  'Total receivables': 'revenue',
-  'Total payables': 'expenses',
-  'Cash and bank balance': 'net',
-  'Total revenue': 'revenue',
-  'Total expenses': 'expenses',
-  'Net profit': 'net',
-};
+import { Download, Plus } from 'lucide-react';
+import { StatusBadge } from '../components/ui/StatusBadge';
+import { Button } from '../components/ui/Button';
+import { PageHeader } from '../components/layout/PageHeader';
+import { StatCard } from '../components/ui/StatCard';
+import { Segmented } from '../components/ui/Segmented';
+import { DataTable, RowLabel, RowValue } from '../components/ui/DataTable';
 
 const CURRENT_FY = (() => {
   const now = new Date();
@@ -50,40 +26,19 @@ const CURRENT_FY = (() => {
   return `FY ${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
 })();
 
-function Sparkline({ points }: { points: number[] }) {
-  if (points.length < 2) return null;
-  const data = points.map((value, index) => ({ index, value }));
-  return (
-    <div className="h-10 w-full mt-space-sm">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
-          <Line type="monotone" dataKey="value" stroke="#006d44" strokeWidth={2} dot={false} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-function downloadCsv(filename: string, rows: (string | number)[][]) {
-  const csv = rows
-    .map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
-    .join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
+export const OVERVIEW_TABS = [
+  { value: 'overview', label: 'Overview', count: 0 },
+  { value: 'cash-flow', label: 'Cash flow', count: 0 },
+  { value: 'tax', label: 'Tax', count: 0 },
+  { value: 'audit', label: 'Audit', count: 0 },
+] as const;
 
 export default function Dashboard() {
-  const { state } = useAuth();
+  useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [chartMode, setChartMode] = useState<'revenue' | 'expenses' | 'net'>('revenue');
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -104,35 +59,6 @@ export default function Dashboard() {
   const activity = (data?.recent_activity || []) as any[];
   const overdue = data?.overdue_count || 0;
 
-  const brief = useMemo(() => {
-    const points: string[] = [];
-    if (overdue > 0) points.push(`${overdue} overdue ${overdue === 1 ? 'record needs' : 'records need'} attention.`);
-    const topReceivable = receivables[0];
-    if (topReceivable) {
-      points.push(`Largest receivable is ${topReceivable.customer_name} at ${formatMoneyIN(topReceivable.amount)}.`);
-    }
-    const lastMonth = monthly[monthly.length - 1];
-    if (lastMonth) {
-      points.push(`This month: revenue ${formatMoneyIN(lastMonth.revenue)}, expenses ${formatMoneyIN(lastMonth.expenses)}.`);
-    }
-    if (points.length === 0) points.push('No receivables, payables or activity recorded for this company yet.');
-    return points;
-  }, [overdue, receivables, monthly]);
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <h1 className="text-headline-lg text-headline-lg font-bold text-on-surface mb-6">Overview</h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-6 gap-space-md">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-surface-container-lowest border border-outline rounded-lg p-5 h-32 animate-pulse" />
-          ))}
-        </div>
-        <div className="mt-space-md bg-surface-container-lowest border border-outline rounded-lg h-72 animate-pulse" />
-      </div>
-    );
-  }
-
   const exportReport = () => {
     const rows: (string | number)[][] = [['FINZI AI dashboard export', CURRENT_FY]];
     rows.push([]);
@@ -149,114 +75,128 @@ export default function Dashboard() {
     downloadCsv(`finzi-dashboard-${CURRENT_FY.replace(/\s+/g, '-')}.csv`, rows);
   };
 
-  return (
-    <div className="p-6 space-y-space-md">
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-space-md">
-        <div>
-          <div className="flex items-center gap-space-sm">
-            <h1 className="text-headline-lg text-headline-lg font-bold text-on-surface tracking-tight">Overview</h1>
-            <span className="inline-flex items-center gap-space-2xs px-space-sm py-space-2xs rounded bg-secondary-container/40 text-secondary text-xs font-semibold">
-              Live data
-            </span>
-          </div>
-          <p className="text-body-md text-body-md text-on-surface-variant mt-space-2xs">
-            Monitor your business finances, automations and statutory compliance.
-          </p>
+  const downloadCsv = (filename: string, rows: (string | number)[][]) => {
+    const csv = rows
+      .map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (loading) {
+    return (
+      <div className="px-4 py-5 lg:px-6">
+        <PageHeader title="Overview" />
+        <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="border border-line rounded-xl bg-surface shimmer h-40" />
+          ))}
         </div>
-        <div className="flex items-center gap-space-sm">
-          <span className="inline-flex items-center px-space-sm py-space-xs rounded bg-surface-container-low border border-outline text-label-md text-label-md font-semibold text-on-surface-variant">
-            {CURRENT_FY}
-          </span>
-          <button
-            onClick={exportReport}
-            className="inline-flex items-center gap-space-xs px-space-md py-space-xs rounded-lg border border-outline text-label-md text-label-md font-semibold text-on-surface hover:bg-surface-container-low transition-colors"
-          >
-            <Download size={14} /> Export
-          </button>
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="inline-flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-secondary text-on-secondary shadow-sm hover:bg-on-secondary-container transition-all font-label-md text-label-md font-semibold"
-            >
-              <Plus size={14} /> New transaction <ChevronDown size={14} />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 mt-space-xs w-52 bg-surface-container-lowest border border-outline rounded-lg shadow-lg z-30 overflow-hidden">
-                {[
-                  { to: '/bills/create', label: 'Purchase bill' },
-                  { to: '/invoices/create', label: 'Sales invoice' },
-                  { to: '/ledger/create', label: 'Journal entry' },
-                ].map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-space-md py-space-sm text-sm text-on-surface hover:bg-surface-container-low transition-colors"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <div className="mt-4 border border-line rounded-xl bg-surface shimmer h-64" />
       </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-5 lg:px-6 space-y-8">
+      <PageHeader
+        title="Overview"
+        description="Receivables, payables, cash and net profit computed from the records stored for this workspace."
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => {}}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-2 text-[12px] font-medium text-on-surface transition-colors hover:bg-sub duration-micro"
+            >
+              {CURRENT_FY}
+            </button>
+            <button
+              type="button"
+              onClick={exportReport}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-2 text-[12px] font-medium text-on-surface transition-colors duration-micro hover:bg-sub"
+            >
+              <Download size={14} /> Export
+            </button>
+            <Button variant="green" size="icon-sm" loading={false}>
+              <Plus size={16} className="text-on-secondary" />
+            </Button>
+          </>
+        }
+        badge={<span className="ml-2 block hidden sm:inline-block rounded-lg border border-line px-2 py-0.5 font-mono text-[10px] text-on-surface-variant">{CURRENT_FY}</span>}
+        tabs={
+          <Segmented
+            options={OVERVIEW_TABS}
+            value="overview"
+            onChange={() => {}}
+            ariaLabel="Dashboard view"
+          />
+        }
+      />
 
       {error && (
-        <div className="bg-error-container/40 border border-error rounded-lg px-space-md py-space-sm text-sm text-error flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={load} className="font-semibold underline">Retry</button>
+        <div className="rounded-xl border border-line bg-neg-soft px-4 py-3 text-sm text-danger-ink font-medium flex items-center gap-2">
+          {error}
+          <button onClick={load} className="ml-auto text-underline font-semibold">
+            Retry
+          </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-6 gap-space-sm">
-        {kpis.map((kpi, i) => {
-          const Icon = KPI_ICONS[kpi.label] || TrendingUp;
-          const seriesKey = KPI_SERIES[kpi.label] || 'revenue';
-          const points = monthly.map((m) => Number(m[seriesKey] || 0));
+      {/* 4-up KPI row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {kpis.map((kpi) => {
+          const points = monthly.map((m) => Number(m[(kpi.label as any) ?? ''] ?? 0));
+          const hasSpark = points.length > 1 && points.some((p) => p !== 0);
           return (
-            <div key={i} className="bg-surface-container-lowest border border-outline rounded-lg p-space-md">
-              <div className="flex items-start justify-between gap-space-sm">
-                <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">
-                  {kpi.label}
-                </p>
-                <Icon size={14} className="text-secondary shrink-0" />
-              </div>
-              <p className="font-numeric-kpi text-numeric-kpi text-on-surface font-bold mt-space-2xs tnum">{kpi.value}</p>
-              <div className="flex items-center gap-1 mt-space-2xs">
-                {kpi.change ? (
-                  <span className={`text-xs font-semibold ${kpi.trend === 'up' ? 'text-secondary' : 'text-error'}`}>
-                    {kpi.change}
-                  </span>
-                ) : (
-                  <span className="text-xs text-on-surface-variant">No prior month to compare</span>
-                )}
-                {kpi.margin && <span className="text-xs text-on-surface-variant">{kpi.margin} margin</span>}
-              </div>
-              <Sparkline points={points} />
-            </div>
+            <StatCard
+              key={kpi.label}
+              title={kpi.label}
+              note="Live data"
+              readout={{ value: String(kpi.value), tone: 'accent' }}
+              metrics={[
+                {
+                  label: 'Change vs last month',
+                  value: kpi.change ?? '—',
+                  deltaTone: kpi.trend === 'up' ? ('positive' as const) : kpi.trend === 'down' ? ('negative' as const) : ('neutral' as const),
+                  caption: kpi.margin ? `${kpi.margin} margin` : undefined,
+                },
+              ]}
+              footer={hasSpark ? (
+                <div className="flex items-end gap-2 h-14">
+                  <LineChart data={points.map((value, index) => ({ index, value }))} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+                    <Line type="monotone" dataKey="value" stroke="#006d44" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </div>
+              ) : undefined}
+            />
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-space-md">
-        <div className="xl:col-span-2 bg-surface-container-lowest border border-outline rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between gap-space-md px-space-md py-space-sm border-b border-outline flex-wrap">
+      {/* Chart card left, "Needs attention" rail right */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 border-b border-line">
             <div>
-              <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">
+              <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">
                 Revenue, expenses and net margin
               </h2>
-              <p className="text-xs text-on-surface-variant">Last six months, from recorded invoices and bills</p>
+              <p className="mt-0.5 text-[10px] leading-3 text-ink-3">Last six months, from recorded invoices and bills</p>
             </div>
-            <div className="flex items-center gap-space-2xs">
+            <div className="flex items-center gap-2">
               {(['revenue', 'expenses', 'net'] as const).map((mode) => (
                 <button
                   key={mode}
+                  type="button"
                   onClick={() => setChartMode(mode)}
-                  className={`px-space-sm py-space-2xs rounded text-label-sm text-label-sm font-semibold transition-colors ${
-                    chartMode === mode
-                      ? 'bg-secondary text-on-secondary'
-                      : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
+                  className={`rounded-lg px-2.5 py-1.5 text-[10.5px] font-semibold leading-4 transition-colors duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 ${
+                    chartMode === mode ? 'bg-brand text-on-secondary' : 'text-ink-3 hover:bg-sub hover:text-primary-text'
                   }`}
                 >
                   {mode === 'net' ? 'Net cash flow' : mode === 'revenue' ? 'Revenue' : 'Expenses'}
@@ -264,166 +204,164 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-          <div className="p-space-md">
+          <div className="p-4">
             {monthly.length === 0 ? (
-              <p className="text-sm text-on-surface-variant py-space-xl text-center">No dated records to chart yet.</p>
+              <p className="py-12 text-center text-[11.5px] leading-4 text-ink-3">No dated records to chart yet.</p>
             ) : (
-              <div className="h-64">
+              <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthly} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                    <CartesianGrid stroke="#e9edff" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#45474c' }} axisLine={{ stroke: '#c5c6cd' }} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: '#45474c' }} axisLine={false} tickLine={false} width={72} />
+                  <LineChart data={monthly} margin={{ top: 6, right: 16, bottom: 8, left: 0 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e9edff" />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#45474c' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#45474c' }} axisLine={false} tickLine={false} width={56} />
                     <Tooltip
+                      content={({ active, payload }: { active?: boolean; payload?: any }) => (
+                        <RevenueTooltip active={active === true} payload={payload} />
+                      )}
                       formatter={(value: number) => formatMoneyIN(value)}
                       contentStyle={{ borderRadius: 8, border: '1px solid #c5c6cd', fontSize: 12 }}
                     />
-                    <Bar dataKey={chartMode} fill="#006d44" radius={[4, 4, 0, 0]} />
-                  </BarChart>
+                    <Line
+                      type="monotone"
+                      dataKey={chartMode}
+                      stroke="#006d44"
+                      strokeWidth={2.5}
+                      dot={false}
+                      strokeOpacity={1}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey={chartMode}
+                      stroke="#006d44"
+                      strokeWidth={1}
+                      dot={false}
+                      fill="#006d44"
+                      fillOpacity={0.1}
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             )}
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest border border-outline rounded-lg overflow-hidden">
-          <div className="px-space-md py-space-sm border-b border-outline">
-            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Financial brief</h2>
-            <p className="text-xs text-on-surface-variant">Computed from the records stored for {state.company?.legal_name || 'this company'}</p>
+        {/* Needs attention rail */}
+        <div>
+          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Needs attention</h2>
+            {overdue > 0 && (
+              <StatusBadge status="overdue">{String(overdue)} overdue</StatusBadge>
+            )}
           </div>
-          <div className="p-space-md space-y-space-sm">
-            {brief.map((line) => (
-              <p key={line} className="text-sm text-on-surface flex items-start gap-space-sm">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
-                {line}
-              </p>
-            ))}
-            <Link
-              to="/ai"
-              className="inline-flex items-center gap-space-xs mt-space-sm text-label-md text-label-md font-semibold text-secondary hover:underline"
-            >
-              Ask FINZI AI about this workspace
-            </Link>
-          </div>
-          <div className={`px-space-md py-space-sm border-t border-outline ${overdue > 0 ? 'bg-error-container/30' : 'bg-surface-container-low/50'}`}>
-            <p className={`text-sm font-semibold ${overdue > 0 ? 'text-error' : 'text-on-surface-variant'}`}>
-              {overdue > 0
-                ? `${overdue} overdue ${overdue === 1 ? 'record' : 'records'} need attention`
-                : 'Nothing overdue'}
-            </p>
+          <div className="space-y-2 p-4">
+            {overdue > 0 ? (
+              [
+                { title: 'Unpaid vendor bills', value: payables.length, meta: 'Due this week' },
+                { title: 'Unmatched bank receipts', value: activity.length, meta: 'Needs review' },
+                { title: 'Overdue customer invoices', value: receivables.length, meta: 'Ready to chase' },
+              ].map((item) => (
+                <StatCard
+                  key={item.title}
+                  title={item.title}
+                  readout={{ value: String(item.value), unit: 'records', tone: 'negative' }}
+                  metrics={[{ label: 'Status', value: item.meta }]}
+                />
+              ))
+            ) : (
+              <p className="py-2 text-center text-[11.5px] leading-4 text-ink-3">Nothing needs attention.</p>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-space-md">
-        <div className="bg-surface-container-lowest border border-outline rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between px-space-md py-space-sm border-b border-outline">
-            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Customer receivables</h2>
-            <Link to="/invoices" className="text-label-md text-label-md font-semibold text-secondary hover:underline">View all</Link>
-          </div>
-          {receivables.length === 0 ? (
-            <p className="px-space-md py-space-lg text-sm text-on-surface-variant text-center">
-              No invoice has an outstanding balance.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-outline">
-                    <th className="text-left px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Invoice</th>
-                    <th className="text-left px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Customer</th>
-                    <th className="text-right px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Amount</th>
-                    <th className="text-right px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Due</th>
-                    <th className="text-right px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {receivables.slice(0, 8).map((item) => (
-                    <tr key={item.id} className="border-b border-outline last:border-0">
-                      <td className="px-space-md py-space-sm text-on-surface font-code-mono text-code-mono">
-                        <Link to={`/invoices/${item.id}`} className="hover:underline">{item.invoice_number}</Link>
-                      </td>
-                      <td className="px-space-md py-space-sm text-on-surface">{item.customer_name}</td>
-                      <td className="px-space-md py-space-sm text-right text-on-surface tnum">{formatMoneyIN(item.amount)}</td>
-                      <td className="px-space-md py-space-sm text-right text-on-surface-variant tnum">
-                        {item.due_date ? formatDateIN(item.due_date) : '—'}
-                      </td>
-                      <td className="px-space-md py-space-sm text-right"><StatusBadge status={item.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* Receivables and payables tables side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="overflow-hidden rounded-xl border border-line overflow-hidden">
+          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <div>
+              <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Customer receivables</h2>
+              <Link to="/invoices" className="mt-0.5 block text-[10px] font-semibold uppercase leading-3 tracking-[0.062em] text-ink-4 hover:underline">
+                View all invoices
+              </Link>
             </div>
-          )}
+          </div>
+          <div className="p-4">
+            <DataTable
+              columns={[
+                { key: 'invoice_number', label: 'INVOICE', render: (row) => <Link to={`/invoices/${row.id}`}>{row.invoice_number}</Link> },
+                { key: 'customer_name', label: 'CUSTOMER', render: (row) => <RowLabel title={row.customer_name} meta={row.gstin || 'GSTIN pending'} /> },
+                { key: 'amount', label: 'AMOUNT', align: 'right', render: (row) => <RowValue value={formatMoneyIN(row.amount)} tone="neutral" /> },
+                { key: 'due_date', label: 'DUE', align: 'right', render: (row) => <RowValue value={formatDateIN(row.due_date)} meta={row.status} tone="neutral" /> },
+              ]}
+              rows={receivables.slice(0, 8)}
+              emptyMessage="No invoice has an outstanding balance."
+            />
+          </div>
         </div>
 
-        <div className="bg-surface-container-lowest border border-outline rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between px-space-md py-space-sm border-b border-outline">
-            <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Vendor payables</h2>
-            <Link to="/bills" className="text-label-md text-label-md font-semibold text-secondary hover:underline">View all</Link>
-          </div>
-          {payables.length === 0 ? (
-            <p className="px-space-md py-space-lg text-sm text-on-surface-variant text-center">
-              No bill has an outstanding balance.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-outline">
-                    <th className="text-left px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Bill</th>
-                    <th className="text-left px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Vendor</th>
-                    <th className="text-right px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Amount</th>
-                    <th className="text-right px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Due</th>
-                    <th className="text-right px-space-md py-space-sm text-xs font-semibold text-on-surface-variant">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payables.slice(0, 8).map((item) => (
-                    <tr key={item.id} className="border-b border-outline last:border-0">
-                      <td className="px-space-md py-space-sm text-on-surface font-code-mono text-code-mono">
-                        <Link to={`/bills/${item.id}`} className="hover:underline">{item.bill_number}</Link>
-                      </td>
-                      <td className="px-space-md py-space-sm text-on-surface">{item.vendor_name}</td>
-                      <td className="px-space-md py-space-sm text-right text-on-surface tnum">{formatMoneyIN(item.amount)}</td>
-                      <td className="px-space-md py-space-sm text-right text-on-surface-variant tnum">
-                        {item.due_date ? formatDateIN(item.due_date) : '—'}
-                      </td>
-                      <td className="px-space-md py-space-sm text-right"><StatusBadge status={item.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="overflow-hidden rounded-xl border border-line overflow-hidden">
+          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <div>
+              <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Vendor payables</h2>
+              <Link to="/bills" className="mt-0.5 block text-[10px] font-semibold uppercase leading-3 tracking-[0.062em] text-ink-4 hover:underline">
+                View all bills
+              </Link>
             </div>
-          )}
+          </div>
+          <div className="p-4">
+            <DataTable
+              columns={[
+                { key: 'bill_number', label: 'BILL', render: (row) => <Link to={`/bills/${row.id}`}>{row.bill_number}</Link> },
+                { key: 'vendor_name', label: 'VENDOR', render: (row) => <RowLabel title={row.vendor_name} meta={row.gstin || 'GSTIN pending'} /> },
+                { key: 'amount', label: 'AMOUNT', align: 'right', render: (row) => <RowValue value={formatMoneyIN(row.amount)} tone="neutral" /> },
+                { key: 'due_date', label: 'DUE', align: 'right', render: (row) => <RowValue value={formatDateIN(row.due_date)} meta={row.status} tone="neutral" /> },
+              ]}
+              rows={payables.slice(0, 8)}
+              emptyMessage="No bill has an outstanding balance."
+            />
+          </div>
         </div>
       </div>
 
-      <div className="bg-surface-container-lowest border border-outline rounded-lg overflow-hidden">
-        <div className="px-space-md py-space-sm border-b border-outline">
-          <h2 className="text-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Recent activity</h2>
-          <p className="text-xs text-on-surface-variant">Actions recorded in this workspace</p>
+      {/* Recent activity */}
+      <div className="overflow-hidden rounded-xl border border-line overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+          <h2 className="text-[12px] font-semibold leading-4 text-primary-text tracking-[-0.01em]">Recent activity</h2>
+          <p className="text-[10px] leading-3 text-ink-3">Actions recorded in this workspace</p>
         </div>
-        {activity.length === 0 ? (
-          <p className="px-space-md py-space-lg text-sm text-on-surface-variant text-center">No activity recorded yet.</p>
-        ) : (
-          <ul className="divide-y divide-outline">
-            {activity.slice(0, 8).map((item) => (
-              <li key={item.id} className="px-space-md py-space-sm flex items-start gap-space-sm">
-                <span className="w-6 h-6 rounded-full bg-surface-container-low text-secondary text-xs font-bold flex items-center justify-center shrink-0">
-                  {(item.actor || '?').charAt(0).toUpperCase()}
+        <div className="divide-y divide-line p-4">
+          {activity.length === 0 ? (
+            <p className="py-6 text-center text-[11.5px] leading-4 text-ink-3">No activity recorded yet.</p>
+          ) : (
+            activity.slice(0, 8).map((item) => (
+              <div key={item.id} className="flex items-start gap-2 py-2">
+                <span className="mt-1 shrink-0 size-4 rounded-full bg-sub flex items-center justify-center text-[10px] font-bold text-ink-2">
+                  {(item.actor || 'S').charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm text-on-surface">
+                  <p className="text-[11.5px] leading-4 text-primary-text">
                     {item.actor || 'System'} {String(item.action || '').replace(/_/g, ' ')}
                   </p>
-                  <p className="text-xs text-on-surface-variant">{item.time ? formatDateIN(item.time) : ''}</p>
+                  {item.time && <p className="mt-0.5 text-[10px] leading-3 text-ink-3">{formatDateIN(item.time)}</p>}
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
+}
+
+function RevenueTooltip({ active, payload }: { active?: boolean; payload?: any }) {
+  if (active && payload && payload.length) {
+    const [dataPoint] = payload;
+    return (
+      <div className="rounded-xl border border-line bg-surface px-3 py-2 shadow-pop">
+        <p className="text-[10px] leading-3 text-ink-3">{dataPoint.name}</p>
+        <p className="text-[12px] font-semibold leading-4 text-primary-text tnum">{formatMoneyIN(dataPoint.value)}</p>
+      </div>
+    );
+  }
+  return null;
 }
