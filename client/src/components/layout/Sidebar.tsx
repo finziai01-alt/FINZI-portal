@@ -109,13 +109,14 @@ export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = (
 
   const companyMenu: MenuItem[] = companies.map((company) => ({
     label: company.legal_name,
-    description: company.gstin || 'GSTIN pending',
     icon: company.id === state.company?.id ? Building2 : undefined,
     onSelect: () => switchCompany(company.id),
   }));
 
   const accountMenu: MenuItem[] = [
     { label: 'Profile and settings', icon: SettingsIcon, onSelect: () => navigate('/settings') },
+    { label: 'Switch account', icon: LogOut, onSelect: () => switchCompany(current?.id || '') },
+    { label: 'Security', icon: ShieldCheck, onSelect: () => navigate('/settings/security') },
     { label: 'Help and support', icon: LifeBuoy, onSelect: () => navigate('/support') },
     {
       label: 'Sign out',
@@ -141,9 +142,15 @@ export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = (
       )}
     >
       {/* Brand row: the mark, then the single rail control. */}
-      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-line px-4">
+      <div className={cn(
+        'flex h-14 shrink-0 items-center justify-between border-b border-line px-4',
+        collapsed ? 'gap-1 px-2' : 'gap-2 px-4'
+      )}>
         <div className="flex min-w-0 items-center gap-2">
-          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-brand text-[13px] font-bold leading-none text-on-secondary">
+          <span className={cn(
+            'grid shrink-0 place-items-center rounded-lg bg-brand text-[13px] font-bold leading-none text-on-secondary',
+            collapsed ? 'size-6 text-[11px]' : 'size-7 text-[13px]'
+          )}>
             F
           </span>
           {!collapsed && (
@@ -160,8 +167,10 @@ export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = (
           onClick={onToggle}
           title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
           aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-          className="grid size-7 shrink-0 place-items-center rounded-lg text-ink-3 transition-colors duration-micro hover:bg-sub hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
-        >
+          className={cn(
+            'grid shrink-0 place-items-center rounded-lg text-ink-3 transition-colors duration-micro hover:bg-sub hover:text-primary-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30',
+            collapsed ? 'size-6 p-0 text-[11px]' : 'size-7 p-0'
+          )}>
           {collapsed ? <PanelLeftOpen aria-hidden="true" className="size-4" /> : <PanelLeftClose aria-hidden="true" className="size-4" />}
         </button>
       </div>
@@ -190,9 +199,6 @@ export const Sidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = (
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[12px] font-medium leading-4 text-primary-text">
                     {current?.legal_name || 'Select company'}
-                  </span>
-                  <span className="block truncate font-mono text-[10px] leading-3 text-ink-3">
-                    {current?.gstin || 'GSTIN pending'}
                   </span>
                 </span>
                 <svg viewBox="0 0 12 12" aria-hidden="true" className="size-3 shrink-0 text-ink-4">

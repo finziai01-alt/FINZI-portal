@@ -45,7 +45,7 @@ export default function Login() {
       await login(email.trim(), password, remember);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Could not sign in with those details');
+      setError('The login credentials entered are wrong. Try again.');
     } finally {
       setLoading(false);
     }

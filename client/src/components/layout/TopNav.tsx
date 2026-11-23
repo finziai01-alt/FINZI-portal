@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Search } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { notificationsList, notificationsRead } from '../../services/api';
 import { cn } from '../../utils/cn';
 import { CommandPalette } from './CommandPalette';
@@ -14,7 +13,6 @@ import { Dropdown, type MenuItem } from '../ui/Dropdown';
  * does not use.
  */
 export const TopNav: React.FC = () => {
-  const { state } = useAuth();
   const navigate = useNavigate();
   const [openPalette, setOpenPalette] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -84,9 +82,7 @@ export const TopNav: React.FC = () => {
           </kbd>
         </button>
 
-        <span className="ml-auto hidden shrink-0 font-mono text-[10.5px] leading-4 text-ink-3 lg:inline">
-          {state.company?.gstin || 'GSTIN pending'}
-        </span>
+        <span className="ml-auto hidden shrink-0 lg:inline" />
 
         <Dropdown
           panelTitle="Notifications"
